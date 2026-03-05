@@ -1,19 +1,35 @@
-PyNeutron - Neutron Scattering Data Analysis Tool
-A powerful, user-friendly desktop application for analyzing inelastic neutron scattering data with Bayesian fitting capabilities. Designed for researchers and scientists working with neutron spectroscopy data.
+# QENS Analysis
 
-🎯 What is PyNeutron?
-PyNeutron is an open-source tool that simplifies the analysis of neutron scattering data. It provides:
+This repository contains a **Jupyter notebook for analyzing Quasi-Elastic Neutron Scattering (QENS) data** stored in **NeXus/NXSPE** format.
 
-Interactive GUI for exploring S(Q,ω) data
+## Features
 
-Advanced fitting with multiple models (Lorentzian, Gaussian, etc.)
+* Load NeXus/NXSPE files
+* Extract energy axis and intensity data
+* Visualize spectra and intensity maps
+* Basic exploratory analysis
 
-Batch processing of multiple Q-points
+## Requirements
 
-Dispersion relation extraction
+Install required packages:
 
-Error propagation and uncertainty quantification
+```bash
+pip install numpy pandas matplotlib nexusformat ipywidgets
+```
 
-Export capabilities for further analysis
+## Usage
 
+1. Clone the repository
+2. Open `QENS_Analysis_file.ipynb` in Jupyter
+3. Update the path to your `.nxs` or `.nxspe` data file and run the notebook
 
+## Future Work
+
+* Extend the project to include a **web-based interface**.
+* Develop a **frontend** for interactive visualization and user input.
+* Implement a **backend** to handle data processing and model execution.
+* Enable users to upload QENS datasets and run analysis directly from a browser.
+
+## License
+
+For research and educational use.

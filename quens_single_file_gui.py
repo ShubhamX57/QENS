@@ -9,8 +9,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import json
 
-from pandastable import Table  # pip install pandastable
 
+from pandastable import Table  
+
+import build_metadata
 
 # =========================
 # Globals
@@ -33,36 +35,36 @@ q_preview_df = pd.DataFrame()
 # =========================
 # Helpers: file scanning
 # =========================
-def build_metadata(folder_path: str) -> pd.DataFrame:
-    records = []
-    for file in glob.glob(os.path.join(folder_path, "*.nxspe")):
-        name = os.path.basename(file).replace(".nxspe", "")
-        if name.startswith("empty"):
-            continue
+# def build_metadata(folder_path: str) -> pd.DataFrame:
+#     records = []
+#     for file in glob.glob(os.path.join(folder_path, "*.nxspe")):
+#         name = os.path.basename(file).replace(".nxspe", "")
+#         if name.startswith("empty"):
+#             continue
 
-        parts = name.split("_")
-        if len(parts) < 4:
-            continue
+#         parts = name.split("_")
+#         if len(parts) < 4:
+#             continue
 
-        try:
-            sample = parts[0]
-            temperature = float(parts[1])
-            Ei = float(parts[2])
-            scattering = parts[3]
+#         try:
+#             sample = parts[0]
+#             temperature = float(parts[1])
+#             Ei = float(parts[2])
+#             scattering = parts[3]
 
-            records.append(
-                {
-                    "filepath": file,
-                    "sample": sample,
-                    "temperature": temperature,
-                    "Ei": Ei,
-                    "scattering": scattering,
-                }
-            )
-        except ValueError:
-            continue
+#             records.append(
+#                 {
+#                     "filepath": file,
+#                     "sample": sample,
+#                     "temperature": temperature,
+#                     "Ei": Ei,
+#                     "scattering": scattering,
+#                 }
+#             )
+#         except ValueError:
+#             continue
 
-    return pd.DataFrame(records)
+#     return pd.DataFrame(records)
 
 
 def validate_files(df: pd.DataFrame) -> tuple[list[str], list[str]]:
@@ -224,7 +226,7 @@ def load_folder():
         messagebox.showerror("Path error", "Folder path does not exist.")
         return
 
-    metadata_full = build_metadata(folder_path)
+    metadata_full = build_metadata.build_metadata(folder_path)
 
     if metadata_full.empty:
         pt.model.df = pd.DataFrame()

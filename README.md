@@ -3,7 +3,7 @@
 </p>
 
 
-# qens — Quasi-Elastic Neutron Scattering Analysis
+# QENS — Quasi-Elastic Neutron Scattering Analysis
 
 A Python library for analysing QENS data, which handles everything from reading the raw binary files through to Bayesian
 inference of diffusion parameters and publication-quality figures.

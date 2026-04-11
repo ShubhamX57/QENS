@@ -77,26 +77,6 @@ S(Q,ω) intensity maps, Γ(Q) vs Q² with posterior fan, and posterior histogram
 All use the same D convention: physical self-diffusion coefficient in Å²/ps,
 with ħ = 0.6582 meV·ps as the bridge to the energy scale.
 
----
-
-## Configuration
-
-```python
-from qens.config import Config
-
-cfg = Config(q_min=0.4,
-             q_max=2.2,
-             n_walkers=64,
-             n_warmup=1000,
-             n_keep=4000,
-             random_seed=0,)
-
-# save for reproducibility
-cfg.to_json("run_settings.json")
-
-# reload later
-cfg2 = Config.from_json("run_settings.json")
-```
 
 ---
 

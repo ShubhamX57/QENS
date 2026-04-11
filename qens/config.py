@@ -1,97 +1,65 @@
 """
-config.py
-
-One place for all the knobs you'd want to turn between runs.
-The idea is that you create a Config object at the top of your script,
-adjust whatever you need, and pass it through the pipeline.
-That way there's never any question about what settings produced a
-particular result — just serialize the config alongside your output.
-
-Example usage
--------------
-    from qens.config import Config
-
-    cfg = Config(q_min=0.4, q_max=2.2, n_walkers=64)
-    cfg.to_json("run_settings.json")
-
-    # or reload later
-    cfg = Config.from_json("run_settings.json")
+Config dataclass — all analysis parameters in one place.
 """
 
+from __future__ import annotations
 import json
 from dataclasses import dataclass, field, asdict
 from typing import List
 
-
 @dataclass
 class Config:
-    # --- which files to actually fit -----------------------------------------
-    # files_to_fit is the list that goes through the full Bayesian pipeline.
-    # primary_file is the one used for single-spectrum diagnostic plots.
-
     files_to_fit: List[str] = field(default_factory=lambda: ["benzene_290_197_inc.nxspe",
                                                              "benzene_290_360_inc.nxspe",])
-
+    
     primary_file: str = "benzene_290_360_inc.nxspe"
 
+    q_min: float = 0.30
+    q_max: float = 2.50
 
-    # --- Q range -------------------------------------------------------------
-    # below q_min the resolution usually dominates; above q_max you start
-    # worrying about multiple scattering. adjust to your sample.
+    ewin_hwhm: float = 0.80
+    ewin_mcmc: float = 0.80
 
-    q_min: float = 0.30    # Å⁻¹
-    q_max: float = 2.50    # Å⁻¹
-
-
-    # --- energy windows ------------------------------------------------------
-    # ewin_hwhm is used when fitting each Q-bin to extract the linewidth.
-    # ewin_mcmc is fed to the Bayesian likelihood — can be narrower if the
-    # wings are noisy.
-
-    ewin_hwhm: float = 0.80   # meV
-    ewin_mcmc: float = 0.80   # meV
-
-
-    # --- binning -------------------------------------------------------------
-    n_bins:    int = 13   # Q bins for the HWHM extraction
-    n_bins_mc: int = 10   # Q bins used in the MCMC likelihood
-
-
-    # --- MCMC settings -------------------------------------------------------
-    # n_walkers must be even and at least 2*ndim (ndim=2 here, so min is 4,
-    # but 32 or more is sensible in practice).
-    # n_warmup is discarded burn-in, n_keep is what you actually sample from.
+    n_bins:    int = 13
+    n_bins_mc: int = 10
 
     n_walkers: int = 32
     n_warmup:  int = 500
     n_keep:    int = 2000
-    thin:      int = 5      # keep every nth sample to reduce autocorrelation
+    thin:      int = 5
 
-    random_seed: int = 42   # used everywhere: MAP starts, walkers, fan plots
-
-
-    # --- output --------------------------------------------------------------
+    random_seed: int = 42
     save_dir: str = "results"
 
+    def __post_init__(self):
+        if self.q_min >= self.q_max:
+            raise ValueError(f"q_min ({self.q_min}) must be < q_max ({self.q_max})")
+        if self.ewin_hwhm <= 0 or self.ewin_mcmc <= 0:
+            raise ValueError("Energy windows must be > 0")
+        if self.n_walkers < 4:
+            raise ValueError("n_walkers must be ≥ 4")
+        if self.n_walkers % 2 != 0:
+            raise ValueError("n_walkers must be even")
+        if self.n_bins < 2 or self.n_bins_mc < 2:
+            raise ValueError("n_bins and n_bins_mc must be ≥ 2")
+        if self.thin < 1:
+            raise ValueError("thin must be ≥ 1")
 
-    # --- helpers -------------------------------------------------------------
-
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return asdict(self)
 
-    def to_json(self, path):
-        """save config to a json file so you can reproduce the run later"""
-        with open(path, "w") as fh:
-            json.dump(self.to_dict(), fh, indent=2)
+    def to_json(self, path: str) -> None:
+        with open(path, "w") as f:
+            json.dump(self.to_dict(), f, indent=2)
+        print(f"  config saved → {path}")
 
     @classmethod
-    def from_json(cls, path):
-        """reload a config that was saved with to_json"""
-        with open(path) as fh:
-            data = json.load(fh)
+    def from_json(cls, path: str) -> "Config":
+        with open(path) as f:
+            data = json.load(f)
         return cls(**data)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         lines = ["Config("]
         for k, v in self.to_dict().items():
             lines.append(f"    {k} = {v!r},")

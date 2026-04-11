@@ -74,17 +74,20 @@ python run_analysis.py --data-dir /data/run42 --save-dir results/
 
 ```
 qens/
-├── __init__.py       public API surface
-├── config.py         Config dataclass — all tunable parameters
-├── constants.py      physical constants and Pelican file layout
-├── io.py             read_nxspe, load_dataset
-├── preprocessing.py  fit_elastic_peak, assign_resolution
-├── models.py         ce, fickian, ss_model, lorentz, gnorm, make_basis
-├── fitting.py        extract_hwhm, log_posterior, find_map, ...
-├── sampling.py       run_mcmc, summarise, gelman_rubin
-└── plotting.py       four publication figures
+├── qens/                     # core library
+│   ├── __init__.py
+│   ├── config.py             # Config dataclass
+│   ├── constants.py          # Physical constants
+│   ├── io.py                 # .nxspe HDF5 reader
+│   ├── preprocessing.py      # Elastic peak & resolution
+│   ├── models.py             # Diffusion models & basis
+│   ├── fitting.py            # HWHM extraction & Bayesian posterior
+│   ├── sampling.py           # MCMC & Gelman‑Rubin
+│   └── plotting.py           # Publication figures
+├── qens_terminal.py          # CLI pipeline (standalone)
+├── QENS_Interactive_App.ipynb   # Jupyter interactive UI
+└── README.md
 
-run_analysis.py       end-to-end pipeline script
 ```
 
 ### Module by module

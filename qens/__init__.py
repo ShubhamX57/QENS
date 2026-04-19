@@ -4,7 +4,7 @@ qens — Quasi-Elastic Neutron Scattering analysis
 
 A modular Python library for the complete QENS analysis pipeline:
 
-    Load → Preprocess → Model → Fit → Sample → Visualise
+    Load >> Preprocess >> Model >> Fit >> Sample >> Visualise
 
 Typical usage
 -------------

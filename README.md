@@ -20,7 +20,7 @@ and **inference machinery**:
   Singwi-Sjölander), and rotational structure factors (isotropic and
   anisotropic axial rotor, expanded to *l* = 2).
 * These are combined into a full forward model
-  S(Q, ω) = e<sup>−Q²⟨u²⟩/3</sup> · [translation ⊗ rotation] ⊗ resolution
+  S(Q, ω) = e<sup>−Q²⟨u²⟩/3</sup> · [translation x rotation] x resolution
   with a measured-kernel resolution path (use the frozen-sample
   S(Q, ω) directly — Lorentzian wings of real instruments don't fit a
   Gaussian).

@@ -1,33 +1,8 @@
 """
-fitting.py — HWHM extraction and Bayesian posterior for diffusion models
-=========================================================================
+Inference primitives: likelihood, prior, MAP search, plus utilities to bin
+the data and build per-Q-bin resolution kernels.
 
-Two independent analysis paths live here:
-
-1. HWHM extraction (frequentist cross-check)
-   ------------------------------------------
-   ``extract_hwhm`` — fits a phenomenological elastic + Lorentzian model to
-   each Q-bin independently using scipy ``curve_fit``, returning Γ(Q) values
-   that can be plotted against Q² as a quick sanity check before running MCMC.
-
-   ``save_hwhm_csv`` — writes the extracted Γ(Q) table to disk.
-
-2. Bayesian posterior (main analysis)
-   ------------------------------------
-   ``build_data_bins``  — bins and averages spectra for MCMC input.
-   ``log_likelihood``   — Gaussian log-likelihood using NNLS-solved amplitudes.
-   ``log_prior``        — uniform prior over a physically motivated (D, l) box.
-   ``log_posterior``    — prior + likelihood.
-   ``find_map``         — maximum a posteriori point estimate via Nelder-Mead.
-
-Profile likelihood
-------------------
-The spectral amplitudes (a_el, a_ql, bg) are solved analytically by NNLS at
-every candidate (D, l).  This marginalises them out of the sampling problem,
-reducing it from 5D to 2D.  The MCMC sampler in sampling.py therefore only
-ever evaluates the 2D log_posterior defined here.
 """
-
 from __future__ import annotations
 
 import csv
@@ -35,484 +10,501 @@ import os
 
 import numpy as np
 from scipy.optimize import curve_fit, minimize, nnls
-from scipy.signal import fftconvolve
+from scipy.signal   import fftconvolve
 
-from .models import ce, gnorm, lorentz, make_basis
-from .config import Config
+from .config       import Config
+from .models       import (
+    lorentz, gnorm, predict_sqw,
+    fickian_hwhm, ce_hwhm, ss_hwhm,
+    bessel_weights, get_model,
+)
+from .models.forward import _make_resolution_kernel
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# HWHM extraction
-# ═══════════════════════════════════════════════════════════════════════════════
+__all__ = [
+    "build_data_bins",
+    "build_resolution_bins",
+    "extract_hwhm",
+    "save_hwhm_csv",
+    "log_likelihood",
+    "log_prior",
+    "log_posterior",
+    "find_map"
+]
 
-def extract_hwhm(d: dict, cfg: Config | None = None):
+
+
+
+def _percentile_edges(values: np.ndarray, n_bins: int) -> np.ndarray:
     """
-    Extract Γ(Q) by fitting a Lorentzian independently in each Q-bin.
+    Equal occupancy bin edges via percentiles.
+    
+    """
+    return np.percentile(values, np.linspace(0, 100, n_bins + 1))
 
-    This is a fast, model-independent cross-check.  It does not use the CE
-    model — it fits a phenomenological elastic + Lorentzian shape to each
-    averaged bin spectrum and reports the best-fit HWHM gamma_val.
 
-    The results are used to:
-    - Plot Γ(Q) vs Q² for a quick visual assessment of diffusion regime.
-    - Compute the EISF as a diagnostic for geometrically confined motion.
-    - Cross-check the Bayesian MCMC posterior.
 
-    Q-binning
-    ---------
-    Detectors are grouped into n_bins quantile bins (percentile edges).
-    Quantile binning ensures roughly equal numbers of detectors per bin
-    regardless of the angular distribution on the instrument.
 
-    Per-bin model
-    -------------
-    S(ω) ≈ a_el · el(ω) + a_ql · ql(ω) + bg
+def _average_bin(
+    indices: np.ndarray,
+    data_arr: np.ndarray,
+    err_arr: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Mean spectrum and combined error spectrum over a set of detector indices.
 
-    where:
-        el(ω) = Gaussian at resolution width sigma_res (elastic component)
-        ql(ω) = Lorentzian(gamma_val) convolved with el(ω) (quasi-elastic)
-        bg    = flat background
+    """
+    specs = np.array([data_arr[i] for i in indices])
+    errs2 = np.array([err_arr[i]  for i in indices]) ** 2
+    spec  = np.nanmean(specs, axis=0)
+    errs  = np.sqrt(np.nanmean(errs2, axis=0))
+    spec  = np.where(np.isfinite(spec), spec, 0.0)
+    err_floor = max(spec.max() * 0.05, 1e-12)
+    errs  = np.where(errs > 0, errs, err_floor)
+    return spec, errs
+
+
+
+
+def build_data_bins(
+    d: dict,
+    cfg: Config | None = None,
+) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, float]]:
+    """
+    Bin a dataset into  "n_q_bins " equal occupancy Q-bins.
 
     Parameters
     ----------
     d : dict
-        Dataset dict from ``read_nxspe`` with sigma_res set by
-        ``assign_resolution``.
-    cfg : Config or None
-        Analysis configuration.  Uses default Config() if None.
+        A processed dataset dict (must already have  "e ",  "good ",  "q ",
+         "data ",  "errs ").
+
+    cfg : Config
 
     Returns
     -------
-    q_out : ndarray
-        Q bin centres (Å⁻¹) for successfully fitted bins.
-    g_out : ndarray
-        Fitted HWHM Γ (meV) per bin.
-    ge_out : ndarray
-        Standard error on Γ per bin, from the curve_fit covariance matrix.
-    eisf_out : ndarray
-        Elastic incoherent structure factor per bin:
-        EISF = a_el / (a_el + a_ql).
-        Should decrease toward 0 with increasing Q for pure translational
-        diffusion.  A plateau indicates confinement.
+    list of  "(omega, spec, errs, q_centre) " tuples — one per Q-bin —
+    where  "omega " is restricted to ±cfg.energy_window and  "q_centre "
+    is the mean Q of the detectors in the bin.
+
     """
+
+
     if cfg is None:
         cfg = Config()
 
-    # ── Setup ─────────────────────────────────────────────────────────────────
-    good  = d["good"].copy()    # copy to avoid mutating the original
-    q_arr = d["q"][good]        # Q per good detector
-    e     = d["e"]              # energy axis (shifted to ω = 0)
-    sr    = d["sigma_res"]      # instrument resolution sigma (meV)
 
-    # Apply Q-range cut from Config
+    good  = d["good"].copy()
+    q_arr = d["q"][good]
+    e     = d["e"]
+
+
     q_mask = (q_arr >= cfg.q_min) & (q_arr <= cfg.q_max)
     good   = good[q_mask]
     q_arr  = q_arr[q_mask]
 
-    if len(good) < 4:
-        print(f"  WARNING: only {len(good)} detectors in Q range [{cfg.q_min}, {cfg.q_max}]")
 
-    # Energy window mask: only fit within ±ewin_hwhm
-    emask   = (e >= -cfg.ewin_hwhm) & (e <= cfg.ewin_hwhm)
-    ew      = e[emask]
+    emask = (e >= -cfg.energy_window) & (e <= cfg.energy_window)
+    ew    = e[emask]
+    edges = _percentile_edges(q_arr, cfg.n_q_bins)
 
-    # Quantile bin edges — equal number of detectors per bin
-    q_edges = np.percentile(q_arr, np.linspace(0, 100, cfg.n_bins + 1))
 
-    # ── Per-bin model ─────────────────────────────────────────────────────────
-    def _model(x, a_el, a_ql, gamma_val, bg):
-        """
-        Elastic + quasi-elastic + background model for one Q-bin.
-
-        Parameters
-        ----------
-        x        : energy axis (meV)
-        a_el     : elastic amplitude
-        a_ql     : quasi-elastic amplitude
-        gamma_val: Lorentzian HWHM (meV) — the parameter we extract
-        bg       : flat background
-        """
-        # Elastic: resolution Gaussian, normalised to peak = 1
-        el = np.exp(-0.5 * (x / sr) ** 2)
-        el /= el.max() if el.max() > 0 else 1.0
-
-        # Quasi-elastic: Lorentzian convolved with resolution Gaussian
-        gamma_safe = max(gamma_val, 1e-5)   # prevent divide-by-zero
-        dt  = x[1] - x[0]
-        lor = (1.0 / np.pi) * gamma_safe / (x**2 + gamma_safe**2)
-        # Convolve then multiply by dt to approximate the continuous integral
-        ql  = fftconvolve(lor, el / (el.sum() * dt + 1e-30), mode="same") * dt
-        ql /= ql.max() if ql.max() > 0 else 1.0
-
-        return a_el * el + a_ql * ql + bg
-
-    # ── Loop over Q-bins ──────────────────────────────────────────────────────
-    q_out, g_out, ge_out, eisf_out = [], [], [], []
-
-    for k in range(cfg.n_bins):
-        # Last bin uses ≤ to include detectors at exactly q_max
-        if k < cfg.n_bins - 1:
-            in_bin = np.where((q_arr >= q_edges[k]) & (q_arr <  q_edges[k+1]))[0]
+    bins: list[tuple[np.ndarray, np.ndarray, np.ndarray, float]] = []
+    for k in range(cfg.n_q_bins):
+        if k < cfg.n_q_bins - 1:
+            mask = (q_arr >= edges[k]) & (q_arr < edges[k + 1])
         else:
-            in_bin = np.where((q_arr >= q_edges[k]) & (q_arr <= q_edges[k+1]))[0]
-
-        if len(in_bin) < 2:
-            continue  # not enough detectors to average meaningfully
-
-        # ── Average spectra within bin ────────────────────────────────────────
-        specs = np.array([d["data"][good[j]][emask] for j in in_bin])
-        errs_ = np.array([d["errs"][good[j]][emask] for j in in_bin])
-
-        spec = np.nanmean(specs, axis=0)
-        spec = np.where(np.isfinite(spec), spec, 0.0)
-
-        # Quadrature-averaged error; floor at 5% of peak to avoid zero-division
-        err       = np.sqrt(np.nanmean(errs_**2, axis=0))
-        err_floor = max(spec.max() * 0.05, 1e-12)
-        err       = np.where(err > 0, err, err_floor)
-
-        q_mid = q_arr[in_bin].mean()
-
-        # ── curve_fit starting point and bounds ───────────────────────────────
-        spec_peak = spec.max() if spec.max() > 0 else 1.0
-        p0 = [
-            spec_peak * 0.5,          # a_el  — roughly half the peak
-            spec_peak * 0.5,          # a_ql  — roughly half the peak
-            max(sr, 0.05),            # gamma — start at resolution width
-            max(spec.min(), 0.0),     # bg    — start at spectral floor
-        ]
-
-        try:
-            popt, pcov = curve_fit(
-                _model, ew, spec, p0=p0, sigma=err,
-                bounds=(
-                    [0, 0, sr * 0.1, 0],                      # lower bounds
-                    [np.inf, np.inf, cfg.ewin_hwhm * 0.9, np.inf],  # upper bounds
-                ),
-                maxfev=8000
-            )
-
-            gamma_val = abs(popt[2])
-            # Error from diagonal of covariance matrix; fallback to 10% if non-finite
-            gamma_err = (
-                np.sqrt(pcov[2, 2]) if np.isfinite(pcov[2, 2]) else gamma_val * 0.1
-            )
-
-            # EISF = elastic fraction of total signal (excluding background)
-            denom    = popt[0] + popt[1]
-            eisf_val = popt[0] / denom if denom > 0 else 0.5
-
-            q_out.append(q_mid)
-            g_out.append(gamma_val)
-            ge_out.append(gamma_err)
-            eisf_out.append(eisf_val)
-
-        except Exception as exc:
-            print(f"  Q-bin {k} (Q≈{q_mid:.3f} Å⁻¹) fit failed: {exc}")
-
-    return (
-        np.array(q_out),
-        np.array(g_out),
-        np.array(ge_out),
-        np.array(eisf_out),
-    )
+            mask = (q_arr >= edges[k]) & (q_arr <= edges[k + 1])
+        if mask.sum() < 2:
+            continue
+        idxs = good[mask]
+        spec, errs = _average_bin(
+            idxs,
+            d["data"][:, emask],
+            d["errs"][:, emask],
+        )
+        bins.append((ew, spec, errs, float(q_arr[mask].mean())))
+    return bins
 
 
-def save_hwhm_csv(q_hwhm, g_hwhm, g_err, eisf, save_dir: str) -> str:
+
+
+def build_resolution_bins(
+    d_ref: dict,
+    cfg: Config | None = None,
+    q_centres: np.ndarray | None = None,
+) -> list[np.ndarray]:
     """
-    Write the HWHM extraction results to a CSV file.
+    Build a measured per Q bin resolution kernel from a frozen sample.
+
+    For each Q bin in the data, average the frozen sample spectra at
+    detectors with similar Q to produce a measured resolution function.
+    Use this kernel inside the forward model, it captures the Lorentzian
+    wings of the real instrument that a pure-Gaussian fit misses.
 
     Parameters
     ----------
-    q_hwhm   : ndarray — Q bin centres (Å⁻¹)
-    g_hwhm   : ndarray — fitted HWHM Γ (meV)
-    g_err    : ndarray — standard error on Γ (meV)
-    eisf     : ndarray — EISF values
-    save_dir : str     — output directory (created if it doesn't exist)
+    d_ref : dict
+        Resolution-reference dataset (typically the frozen low-T inc file).
+        Must already have  "e ",  "good ",  "q ",  "data ".
+
+    cfg : Config
+    q_centres : array, optional
+        If given, build kernels at these Q-centres instead of percentile bins.
+        Useful when matching the binning of a different (target) dataset.
 
     Returns
     -------
-    str
-        Full path to the written CSV file.
+    list of 1-D arrays, one per Q-bin, on the same ω grid as
+    :func:`build_data_bins`.
+
+
     """
-    os.makedirs(save_dir, exist_ok=True)
-    path = os.path.join(save_dir, "hwhm_table.csv")
-
-    with open(path, "w", newline="") as f:
-        w = csv.writer(f)
-        # Header row
-        w.writerow(["q_centre_ainv", "hwhm_mev", "hwhm_err_mev", "eisf"])
-        # One data row per Q-bin
-        for q, g, ge, ei in zip(q_hwhm, g_hwhm, g_err, eisf):
-            w.writerow([f"{q:.4f}", f"{g:.6f}", f"{ge:.6f}", f"{ei:.4f}"])
-
-    print(f"  HWHM table saved → {path}")
-    return path
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Bayesian posterior
-# ═══════════════════════════════════════════════════════════════════════════════
+    if cfg is None:
+        cfg = Config()
+    good = d_ref["good"].copy()
+    q_arr = d_ref["q"][good]
+    e = d_ref["e"]
+    q_mask = (q_arr >= cfg.q_min) & (q_arr <= cfg.q_max)
+    good = good[q_mask]
+    q_arr = q_arr[q_mask]
+    emask = (e >= -cfg.energy_window) & (e <= cfg.energy_window)
 
-def build_data_bins(d_inc: dict, cfg: Config | None = None) -> list:
+
+    if q_centres is None:
+        edges = _percentile_edges(q_arr, cfg.n_q_bins)
+        n = cfg.n_q_bins
+    else:
+        # build edges centred on each Q-centre
+        qc = np.asarray(q_centres, dtype=float)
+        edges = np.empty(len(qc) + 1)
+        edges[1:-1] = 0.5 * (qc[:-1] + qc[1:])
+        edges[0]  = qc[0]  - 0.5 * (qc[1]  - qc[0])
+        edges[-1] = qc[-1] + 0.5 * (qc[-1] - qc[-2])
+        n = len(qc)
+
+
+    out: list[np.ndarray] = []
+    for k in range(n):
+        if k < n - 1:
+            mask = (q_arr >= edges[k]) & (q_arr < edges[k + 1])
+        else:
+            mask = (q_arr >= edges[k]) & (q_arr <= edges[k + 1])
+        idxs = good[mask]
+        if len(idxs) < 1:
+            qc_k = 0.5 * (edges[k] + edges[k + 1])
+            idxs = good[np.argsort(np.abs(q_arr - qc_k))[:5]]
+        specs = np.array([d_ref["data"][i][emask] for i in idxs])
+        specs = np.where(np.isfinite(specs), specs, 0.0)
+        kernel = np.nanmean(specs, axis=0)
+        kernel = np.where(kernel > 0, kernel, 0.0)
+        out.append(kernel)
+    return out
+
+
+
+def extract_hwhm(
+    d: dict,
+    cfg: Config | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
-    Build the list of Q-binned spectra used as input to the Bayesian fit.
+    
+    Fit  "elastic + Lorentzian + bg " independently in each Q-bin.
 
-    Each bin averages ~15–20 detector spectra, raising per-bin peak counts
-    from ~100–200 (single detector) to ~2000–4000, which is necessary to
-    resolve the Lorentzian shape above the noise.
 
     Parameters
     ----------
-    d_inc : dict
-        Dataset dict for the incoherent warm-sample run.
-    cfg : Config or None
+    d : dict
+    cfg : Config
 
     Returns
     -------
-    list of tuples
-        Each tuple is (e_grid, spec, errs, q_mean):
-            e_grid : ndarray — energy axis in the fitting window (meV)
-            spec   : ndarray — mean spectrum across detectors in this bin
-            errs   : ndarray — quadrature-averaged errors with 5% floor
-            q_mean : float   — mean Q of detectors in this bin (Å⁻¹)
+    q_centres, hwhm, hwhm_err, eisf : 1-D arrays of length n_qbins (or fewer
+    if some bins fail to fit).
+
     """
     if cfg is None:
         cfg = Config()
 
-    # ── Apply Q-range and energy window cuts ──────────────────────────────────
-    good  = d_inc["good"].copy()
-    q_g   = d_inc["q"][good]
-    e     = d_inc["e"]
 
-    q_mask = (q_g >= cfg.q_min) & (q_g <= cfg.q_max)
+    good  = d["good"].copy()
+    q_arr = d["q"][good]
+    e     = d["e"]
+    sr    = d["sigma_res"]
+
+
+    q_mask = (q_arr >= cfg.q_min) & (q_arr <= cfg.q_max)
     good   = good[q_mask]
-    q_g    = q_g[q_mask]
+    q_arr  = q_arr[q_mask]
 
-    emask = (e >= -cfg.ewin_mcmc) & (e <= cfg.ewin_mcmc)
+
+    emask = (e >= -cfg.energy_window) & (e <= cfg.energy_window)
     ew    = e[emask]
+    edges = _percentile_edges(q_arr, cfg.n_q_bins)
 
-    # Quantile bin edges — equal detector count per bin
-    q_edges = np.percentile(q_g, np.linspace(0, 100, cfg.n_bins_mc + 1))
 
-    bins = []
-    for k in range(cfg.n_bins_mc):
-        if k < cfg.n_bins_mc - 1:
-            mask = (q_g >= q_edges[k]) & (q_g <  q_edges[k+1])
+    def _model(x, a_el, a_ql, gamma, bg):
+        """
+        elastic Gaussian + (Lorentz x Gauss) + bg, all peak normalised.
+        
+        """
+        el = np.exp(-0.5 * (x / sr) ** 2)
+        el = el / max(el.max(), 1e-30)
+        g = max(gamma, 1e-5)
+        dt = x[1] - x[0]
+        ql = (1.0 / np.pi) * g / (x ** 2 + g ** 2)
+        ql = fftconvolve(ql, el / max(el.sum() * dt, 1e-30),
+                         mode="same") * dt
+        ql = ql / max(ql.max(), 1e-30)
+        return a_el * el + a_ql * ql + bg
+
+
+
+    q_out, g_out, ge_out, eisf_out = [], [], [], []
+    for k in range(cfg.n_q_bins):
+        if k < cfg.n_q_bins - 1:
+            sel = np.where((q_arr >= edges[k]) & (q_arr < edges[k + 1]))[0]
         else:
-            mask = (q_g >= q_edges[k]) & (q_g <= q_edges[k+1])
+            sel = np.where((q_arr >= edges[k]) & (q_arr <= edges[k + 1]))[0]
+        if len(sel) < 2:
+            continue
 
-        if mask.sum() < 2:
-            continue  # not enough detectors in this bin
-
-        idxs  = good[mask]
-        specs = np.array([d_inc["data"][i][emask] for i in idxs])
-        errs_ = np.array([d_inc["errs"][i][emask] for i in idxs])
-
-        # Mean spectrum and quadrature error across detectors in this bin
-        spec = np.nanmean(specs, axis=0)
-        errs = np.sqrt(np.nanmean(errs_**2, axis=0))
-        spec = np.where(np.isfinite(spec), spec, 0.0)
-
-        # Error floor at 5% of peak — prevents zero-division in chi-squared
-        err_floor = max(spec.max() * 0.05, 1e-12)
-        errs      = np.where(errs > 0, errs, err_floor)
-
-        bins.append((ew, spec, errs, float(q_g[mask].mean())))
-
-    print(f"  prepared {len(bins)} Q bins for MCMC")
-    return bins
-
-
-def log_likelihood(d_val: float, l: float, data_bins: list, sr: float) -> float:
-    """
-    Gaussian log-likelihood for the CE model at parameters (D, l).
-
-    At each (D, l) the spectral amplitudes (a_el, a_ql, bg) are solved
-    analytically by NNLS for every Q-bin.  This is a profile likelihood —
-    the amplitudes are marginalised out exactly, reducing the sampling
-    problem from 5D to 2D.
-
-    Why NNLS instead of ordinary least squares?
-    --------------------------------------------
-    Amplitudes represent physical quantities (elastic fraction, quasi-elastic
-    fraction, background level) that cannot be negative.  OLS does not enforce
-    this constraint and can return negative amplitudes when one component is
-    small, producing an unphysical model.  NNLS enforces a_el, a_ql, bg ≥ 0
-    at negligible extra cost (only 3 basis functions).
-
-    Parameters
-    ----------
-    d_val : float
-        Trial diffusion coefficient (Å²/ps).
-    l : float
-        Trial jump length (Å).  Absolute value is taken internally.
-    data_bins : list
-        Output of ``build_data_bins``.
-    sr : float
-        Instrument resolution sigma (meV).
-
-    Returns
-    -------
-    float
-        Log-likelihood value.  Returns -inf for unphysical parameters.
-    """
-    # Guard: both parameters must be strictly positive
-    if d_val <= 0 or abs(l) <= 0:
-        return -np.inf
-
-    logl = 0.0
-    for e_grid, spec, errs, q_val in data_bins:
-        # Build the [elastic | quasi-elastic | background] basis matrix
-        basis = make_basis(e_grid, q_val, d_val, abs(l), sr)
-
-        # Solve for non-negative amplitudes: min ||W(B·α − s)||²  s.t. α ≥ 0
-        # W = diag(1/σ) is the inverse-error weighting matrix
+        spec, errs = _average_bin(
+            good[sel], d["data"][:, emask], d["errs"][:, emask]
+        )
+        peak = max(spec.max(), 1.0)
+        p0 = [peak * 0.5, peak * 0.5, max(sr, 0.05), max(spec.min(), 0.0)]
         try:
-            amp, _ = nnls(basis / errs[:, None], spec / errs)
+            popt, pcov = curve_fit(
+                _model, ew, spec, p0=p0, sigma=errs,
+                bounds=([0, 0, sr * 0.1, 0],
+                        [np.inf, np.inf, cfg.energy_window * 0.9, np.inf]),
+                maxfev=8000,
+            )
         except Exception:
-            return -np.inf
+            continue
+        gamma = abs(popt[2])
+        gerr = float(np.sqrt(pcov[2, 2])) if np.isfinite(pcov[2, 2]) else gamma * 0.1
+        denom = popt[0] + popt[1]
+        eisf = popt[0] / denom if denom > 0 else 0.5
+        q_out.append(q_arr[sel].mean())
+        g_out.append(gamma)
+        ge_out.append(gerr)
+        eisf_out.append(eisf)
 
-        # Residuals and Gaussian log-likelihood contribution from this bin
-        resid = spec - basis @ amp
-        logl -= 0.5 * np.sum((resid / errs)**2)
-
-    return logl
+    return (np.array(q_out), np.array(g_out),
+            np.array(ge_out), np.array(eisf_out))
 
 
-def log_prior(d_val: float, l: float) -> float:
+
+def save_hwhm_csv(
+    q_centres: np.ndarray, hwhm: np.ndarray, hwhm_err: np.ndarray,
+    eisf: np.ndarray, save_dir: str,
+) -> str:
     """
-    Uniform log-prior over a physically motivated (D, l) box.
-
-    The prior is zero (log = 0) inside the box and −∞ outside.
-
-    Bounds
-    ------
-    D ∈ (0, 3.0) Å²/ps
-        Upper limit: D > 3 Å²/ps would be faster than small gas molecules —
-        implausible for a liquid-phase sample.
-
-    l ∈ (0.5, 6.0) Å
-        Lower limit: below 0.5 Å the jump is smaller than an atomic radius —
-        unphysical.
-        Upper limit: above 6 Å the molecule would jump several diameters in
-        one step — implausible for a compact liquid.
-
-    Why uniform rather than log-uniform for l?
-    -------------------------------------------
-    Log-uniform is appropriate when l could span orders of magnitude.  Here
-    the physically plausible range is less than one decade (0.5–6 Å), so
-    uniform is a reasonable approximation and simpler to implement.
-
-    Parameters
-    ----------
-    d_val : float
-        Diffusion coefficient (Å²/ps).
-    l : float
-        Jump length (Å).
-
-    Returns
-    -------
-    float
-        0.0 inside the prior box, -np.inf outside.
+    Write the HWHM table to "<save_dir>/hwhm_table.csv ".
     """
-    if 0 < d_val < 3.0 and 0.5 < abs(l) < 6.0:
+    os.makedirs(save_dir, exist_ok=True)
+    path = os.path.join(save_dir, "hwhm_table.csv")
+    with open(path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["q_centre_inv_angstrom",
+                    "hwhm_mev", "hwhm_err_mev", "eisf"])
+        for q, g, ge, ei in zip(q_centres, hwhm, hwhm_err, eisf):
+            w.writerow([f"{q:.4f}", f"{g:.6f}", f"{ge:.6f}", f"{ei:.4f}"])
+    return path
+
+
+
+
+# Bayesian inference over registered ForwardModels
+
+def _resolve_kernel_for_bin(sigma_res, k):
+    """
+    If sigma_res is a list/array of arrays, take the k-th one.
+    
+    """
+    if isinstance(sigma_res, (list, tuple)):
+        return sigma_res[k]
+    if isinstance(sigma_res, np.ndarray) and sigma_res.ndim > 1:
+        return sigma_res[k]
+    return sigma_res
+
+
+
+
+def log_prior(
+    params: np.ndarray,
+    model: str = "anisotropic_rotor",
+) -> float:
+    """
+    
+    Log-prior: 0 inside the registered model's prior box,  "-inf " outside.
+    
+    """
+    fm = get_model(model)
+    if fm.in_prior(np.asarray(params)):
         return 0.0
     return -np.inf
 
 
-def log_posterior(d_val: float, l: float, data_bins: list, sr: float) -> float:
-    """
-    Log-posterior = log-prior + log-likelihood.
 
-    Short-circuits to -inf if the prior rejects the parameters (avoiding
-    an expensive likelihood evaluation for out-of-bound proposals).
+
+def log_likelihood(
+    params: np.ndarray,
+    data_bins: list,
+    sigma_res,
+    model: str = "anisotropic_rotor",
+    **extras,
+) -> float:
+    """
+    Joint X^2 log-likelihood across all Q-bins.
+
+    For each bin a 2 column NNLS fits  "[overall_amp, flat_bg] ", so the
+    physics determined Bessel weight ratios inside the forward model are
+    preserved as a global Q-constraint.
 
     Parameters
     ----------
-    d_val, l : float
-        Diffusion coefficient (Å²/ps) and jump length (Å).
-    data_bins : list
-        Output of ``build_data_bins``.
-    sr : float
-        Instrument resolution sigma (meV).
+    params : array
+        Parameter vector matching the registered model.
 
-    Returns
-    -------
-    float
-        Log-posterior value.
+    data_bins : list of (omega, spec, errs, q)
+        From :func:`build_data_bins`.
+
+    sigma_res : float | array | list[array]
+        Resolution: scalar Gaussian , single measured kernel, or one
+        kernel per Q-bin (list of arrays).
+
+    model : str
+        Name of a registered forward model. Default  ""anisotropic_rotor" ".
+
+    extras :
+        Forwarded to the model's  "predict " callable.
+
     """
-    lp = log_prior(d_val, l)
+
+    fm = get_model(model)
+    if not fm.in_prior(np.asarray(params)):
+        return -np.inf
+    if any(p <= 0 for p, lo in zip(params, fm.prior_lo) if lo > 0):
+        return -np.inf
+
+
+    extras_full = {**fm.extras, **extras}
+    logl = 0.0
+    for k, (omega, spec, errs, q) in enumerate(data_bins):
+        sr_k = _resolve_kernel_for_bin(sigma_res, k)
+        try:
+            shape = fm.predict(omega, q, params, sr_k, **extras_full)
+        except Exception:
+            return -np.inf
+        if not np.all(np.isfinite(shape)):
+            return -np.inf
+        basis = np.column_stack([shape, np.ones_like(shape)])
+        try:
+            amp, _ = nnls(basis / errs[:, None], spec / errs)
+        except Exception:
+            return -np.inf
+        resid = spec - basis @ amp
+        logl -= 0.5 * np.sum((resid / errs) ** 2)
+    return logl
+
+
+
+
+def log_posterior(
+    params, data_bins, sigma_res,
+    model: str = "anisotropic_rotor",
+    **extras,
+) -> float:
+    """
+    Convenience wrapper: prior + likelihood.
+    
+    """
+    lp = log_prior(params, model=model)
     if not np.isfinite(lp):
         return -np.inf
-    return lp + log_likelihood(d_val, l, data_bins, sr)
+    return lp + log_likelihood(params, data_bins, sigma_res,
+                               model=model, **extras)
 
 
-def find_map(data_bins: list, sr: float, cfg: Config | None = None) -> tuple:
+
+
+def find_map(
+    data_bins: list,
+    sigma_res,
+    model: str = "anisotropic_rotor",
+    cfg: Config | None = None,
+    n_starts: int | None = None,
+    verbose: bool = True,
+    **extras,
+) -> tuple[np.ndarray, float]:
     """
-    Find the Maximum A Posteriori (MAP) estimate of (D, l) via Nelder-Mead.
-
-    Runs 20 optimisations from random starting points and returns the best
-    result.  Multiple starts guard against convergence to a local maximum.
-
-    The MAP serves two purposes:
-    1. A quick point estimate reportable without running full MCMC.
-    2. An initialisation point for the MCMC walkers — starting near the
-       posterior peak dramatically reduces warmup time.
+    Maximum- a posteriori search via Nelder Mead from random starts.
 
     Parameters
     ----------
     data_bins : list
-        Output of ``build_data_bins``.
-    sr : float
-        Instrument resolution sigma (meV).
-    cfg : Config or None
+
+    sigma_res : float | array | list[array]
+    
+    model : str
+        Name of a registered forward model.
+
+    cfg : Config
+
+    n_starts : int, optional
+        Random starts. If None uses  "cfg.n_map_starts ".
+
+    verbose : bool
+
+    extras :
+        Forwarded to the model's  "predict " callable.
 
     Returns
     -------
-    d_map : float
-        MAP diffusion coefficient (Å²/ps).
-    l_map : float
-        MAP jump length (Å).
-    tau_map : float
-        MAP residence time τ = l²/(6D) (ps).
+    (params_map, neg_logp) : (ndarray, float)
+
     """
+
     if cfg is None:
         cfg = Config()
-
+    fm = get_model(model)
     rng = np.random.default_rng(cfg.random_seed)
+    n_starts = n_starts if n_starts is not None else cfg.n_map_starts
 
-    def neg_lp(params):
-        """Objective for minimisation: negative log-posterior."""
-        return -log_posterior(params[0], abs(params[1]), data_bins, sr)
+
+    def neg_lp(p):
+        return -log_posterior(p, data_bins, sigma_res, model=model, **extras)
+
 
     best_val = np.inf
-    best_p   = np.array([0.3, 2.0])  # reasonable fallback starting point
+    best_p: np.ndarray | None = None
+    for _ in range(n_starts):
+        p0 = fm.random_in_prior(rng)
+        res = minimize(neg_lp, p0, method="Nelder-Mead",
+                       options={"maxiter": 30000,
+                                "xatol": 1e-8, "fatol": 1e-8})
+        if res.fun < best_val and np.isfinite(res.fun):
+            best_val = float(res.fun)
+            best_p   = np.asarray(res.x)
 
-    print("  finding MAP (20 random starts) ...")
-    for _ in range(20):
-        # Random starting point drawn from within the prior box
-        d0 = rng.uniform(0.05, 1.5)
-        l0 = rng.uniform(1.0, 4.0)
 
-        res = minimize(
-            neg_lp, [d0, l0],
-            method="Nelder-Mead",
-            options={"maxiter": 10000, "xatol": 1e-7, "fatol": 1e-7},
+    if best_p is None:
+        raise RuntimeError(
+            f"MAP search failed for all {n_starts} starts — likelihood -inf "
+            f"everywhere in the prior box. Check data, priors, and "
+            f"resolution kernel."
         )
 
-        # Keep the result only if it is the best finite value seen so far
-        if res.fun < best_val and np.isfinite(res.fun):
-            best_val = res.fun
-            best_p   = res.x
 
-    d_map   = float(best_p[0])
-    l_map   = abs(float(best_p[1]))          # ensure positive
-    tau_map = l_map**2 / (6 * d_map)        # ps
+    if verbose:
+        print(f"  MAP for model {model!r}:  -lnP = {best_val:.2f}")
+        for n, v in zip(fm.param_names, best_p):
+            print(f"      {n:<16} = {v:.5f}")
 
-    print(
-        f"  MAP: D={d_map:.5f} Å²/ps  "
-        f"l={l_map:.5f} Å  "
-        f"τ={tau_map:.5f} ps"
-    )
-    return d_map, l_map, tau_map
+
+    return best_p, best_val

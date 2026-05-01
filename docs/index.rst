@@ -22,7 +22,7 @@ Features
    :caption: Contents:
 
    api
-   examples
+
 
 .. include:: ../README.md
    :parser: myst_parser.sphinx_

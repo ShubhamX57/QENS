@@ -1,172 +1,277 @@
+/* ===== Custom RTD Scientific Theme ===== */
 
+/* ---------- Root Variables ---------- */
+:root {
+    /* Sidebar */
+    --sidebar-bg: #1b2a3a;         /* dark navy */
+    --sidebar-link: #cbd5e0;
+    --sidebar-link-hover: #ffffff;
+    --sidebar-current-bg: #2d4a6b;
+    --sidebar-current-border: #5b9bd5;
+
+    /* Main text */
+    --body-font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --heading-font: 'Georgia', 'Times New Roman', serif;
+    --code-font: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+
+    --text-color: #222;
+    --link-color: #005b9f;
+    --link-hover: #003566;
+
+    /* Code blocks */
+    --code-bg: #f7f9fc;
+    --code-border: #d8e0ea;
+    --code-text: #2c3e50;
+
+    /* Admonitions */
+    --note-bg: #eef4fb;
+    --note-border: #5b9bd5;
+    --warning-bg: #fff8e4;
+    --warning-border: #e6a817;
+    --tip-bg: #eef7ee;
+    --tip-border: #5ca85c;
+    --danger-bg: #fdf0f0;
+    --danger-border: #d35b5b;
+
+    /* Tables */
+    --table-header-bg: #2c3e50;
+    --table-header-text: #ffffff;
+    --table-row-alt: #f4f7fb;
+}
+
+/* ---------- Typography ---------- */
 body {
-    font-family: "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-    font-size: 16px;
+    font-family: var(--body-font);
+    color: var(--text-color);
     line-height: 1.7;
-    color: #1f2937;
-    background-color: #ffffff;
 }
 
-/* Improve heading hierarchy */
-h1, h2, h3, h4 {
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--heading-font);
     font-weight: 600;
-    color: #111827;
-    letter-spacing: -0.02em;
+    color: #1a202c;
+    margin-top: 1.8em;
+    margin-bottom: 0.6em;
 }
 
-h1 {
-    border-bottom: 2px solid #e5e7eb;
-    padding-bottom: 0.3em;
-}
+h1 { font-size: 2.3rem; border-bottom: 3px solid #2c3e50; padding-bottom: 0.3rem; }
+h2 { font-size: 1.8rem; border-bottom: 1px solid #d0d7de; padding-bottom: 0.2rem; }
+h3 { font-size: 1.5rem; }
+h4 { font-size: 1.25rem; }
 
-h2 {
-    border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 0.2em;
-}
+p { margin-bottom: 1.2rem; }
 
-/* -------- Sidebar (RTD Navigation) -------- */
-.wy-nav-side {
-    background: #0b1320;  /* deep scientific navy */
-}
-
-.wy-side-nav-search {
-    background-color: #0b1320;
-    border-bottom: 1px solid #1f2a44;
-}
-
-.wy-side-nav-search input[type="text"] {
-    border-radius: 6px;
-    border: none;
-    padding: 8px;
-}
-
-/* Sidebar links */
-.wy-menu-vertical a {
-    color: #cbd5e1;
-}
-
-.wy-menu-vertical a:hover {
-    background-color: #1f2a44;
-    color: #ffffff;
-}
-
-/* Active item */
-.wy-menu-vertical li.current > a {
-    background-color: #2563eb;
-    color: white;
-    border-radius: 4px;
-}
-
-/* -------- Content Area -------- */
-.wy-nav-content {
-    max-width: 1000px;
-}
-
-/* Improve paragraph spacing */
-p {
-    margin-bottom: 1em;
-}
-
-/* -------- Code Blocks (important for scientific libs) -------- */
-code, pre {
-    font-family: "Fira Code", "Source Code Pro", monospace;
-    font-size: 14px;
-}
-
-div.highlight {
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-    background: #0f172a; /* dark scientific code block */
-}
-
-.highlight pre {
-    color: #e2e8f0;
-    padding: 12px;
-    overflow-x: auto;
-}
-
-/* Inline code */
-code.literal {
-    background: #f1f5f9;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 90%;
-}
-
-/* -------- Admonitions (notes, warnings, etc.) -------- */
-.admonition {
-    border-radius: 8px;
-    border-left-width: 6px;
-}
-
-.admonition.note {
-    background: #eff6ff;
-    border-left-color: #3b82f6;
-}
-
-.admonition.warning {
-    background: #fff7ed;
-    border-left-color: #f97316;
-}
-
-.admonition.tip {
-    background: #ecfdf5;
-    border-left-color: #10b981;
-}
-
-/* -------- Tables (important for scientific data) -------- */
-table.docutils {
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #e5e7eb;
-}
-
-table.docutils th {
-    background: #f3f4f6;
-    font-weight: 600;
-}
-
-table.docutils td {
-    padding: 8px;
-}
-
-/* -------- Links -------- */
+/* ---------- Links ---------- */
 a {
-    color: #2563eb;
+    color: var(--link-color);
     text-decoration: none;
 }
-
 a:hover {
+    color: var(--link-hover);
     text-decoration: underline;
 }
 
-/* -------- Top Logo Area -------- */
-.wy-side-nav-search > a img.logo {
-    max-height: 70px;
-    margin: 10px auto;
+/* ---------- Sidebar Overrides (RTD) ---------- */
+.wy-side-nav-search {
+    background-color: var(--sidebar-bg);
+}
+.wy-side-nav-search > a {
+    font-family: var(--heading-font);
+    font-size: 1.4rem;
+    color: #fff;
+    font-weight: 600;
+}
+.wy-side-nav-search > div.version {
+    color: #a0b4c8;
 }
 
-/* -------- Footer -------- */
-footer {
-    color: #6b7280;
-    font-size: 0.9em;
+.wy-menu-vertical header, .wy-menu-vertical p.caption {
+    color: #7fa3c1;
+    font-family: var(--heading-font);
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* -------- Math (if using MyST / MathJax) -------- */
+.wy-menu-vertical a {
+    color: var(--sidebar-link);
+    font-weight: 400;
+}
+.wy-menu-vertical a:hover {
+    background-color: #233a51;
+    color: var(--sidebar-link-hover);
+}
+.wy-menu-vertical li.current {
+    background: var(--sidebar-current-bg);
+}
+.wy-menu-vertical li.current > a {
+    color: #ffffff;
+    font-weight: 500;
+    border-right: 3px solid var(--sidebar-current-border);
+}
+.wy-menu-vertical li.toctree-l1.current > a {
+    border-right: none;
+    background: var(--sidebar-current-bg);
+}
+.wy-menu-vertical li.toctree-l2.current > a,
+.wy-menu-vertical li.toctree-l3.current > a {
+    background: #314c64;
+    border-right: 3px solid var(--sidebar-current-border);
+}
+
+/* ---------- Code Blocks ---------- */
+code, pre {
+    font-family: var(--code-font);
+    font-size: 0.92rem;
+}
+
+code.literal {
+    background: #f0f4f8;
+    border: 1px solid #d5dfe8;
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    color: #2c3e50;
+}
+
+pre {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 6px;
+    padding: 1.2rem;
+    overflow-x: auto;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    margin: 1.5rem 0;
+}
+
+pre code {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--code-text);
+}
+
+/* ---------- Admonitions ---------- */
+div.admonition {
+    border-radius: 6px;
+    padding: 1rem 1.4rem;
+    margin: 1.8rem 0;
+    border-left: 5px solid;
+    background: #fafbfc;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+div.admonition p.admonition-title {
+    font-family: var(--heading-font);
+    font-weight: 600;
+    font-size: 1.05rem;
+    margin-top: 0;
+    margin-bottom: 0.6rem;
+}
+
+div.note {
+    background: var(--note-bg);
+    border-color: var(--note-border);
+}
+div.note .admonition-title {
+    color: #2c5282;
+}
+
+div.warning {
+    background: var(--warning-bg);
+    border-color: var(--warning-border);
+}
+div.warning .admonition-title {
+    color: #975a16;
+}
+
+div.tip, div.hint {
+    background: var(--tip-bg);
+    border-color: var(--tip-border);
+}
+div.tip .admonition-title {
+    color: #276749;
+}
+
+div.danger, div.error {
+    background: var(--danger-bg);
+    border-color: var(--danger-border);
+}
+div.danger .admonition-title {
+    color: #9b2c2c;
+}
+
+/* ---------- Tables ---------- */
+table.docutils {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.8rem 0;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+table.docutils thead th {
+    background: var(--table-header-bg);
+    color: var(--table-header-text);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-family: var(--heading-font);
+    letter-spacing: 0.3px;
+}
+
+table.docutils tbody td {
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+table.docutils tbody tr:nth-child(even) {
+    background: var(--table-row-alt);
+}
+
+table.docutils tbody tr:hover {
+    background: #eaf0f8;
+}
+
+/* ---------- Math ---------- */
 .math {
-    font-size: 1.05em;
+    font-size: 1.05rem;
+    padding: 0.4rem 0;
+    display: inline-block;
 }
 
-/* -------- Scrollbar (modern touch) -------- */
+div.math {
+    margin: 1.5rem 0;
+    overflow-x: auto;
+}
+
+/* ---------- Scrollbar (Webkit) ---------- */
 ::-webkit-scrollbar {
     width: 8px;
+    height: 8px;
 }
-
+::-webkit-scrollbar-track {
+    background: #edf2f7;
+}
 ::-webkit-scrollbar-thumb {
-    background: #94a3b8;
+    background: #a0aec0;
     border-radius: 4px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
+    background: #718096;
+}
+
+/* ---------- Miscellaneous ---------- */
+/* Improve blockquote appearance */
+blockquote {
+    border-left: 4px solid #b0c4de;
+    background: #f5f9ff;
+    padding: 0.8rem 1.4rem;
+    margin: 1.2rem 0;
+    color: #334;
+    font-style: italic;
+}
+
+/* Slightly tighten up the RTD footer */
+.rst-footer-buttons {
+    margin-top: 2.5rem;
 }

@@ -11,7 +11,6 @@ extensions = [
     "sphinx.ext.napoleon",
 ]
 
-html_theme = 'python_docs_theme'
 
 html_logo = "../logo/qens_logo_dark.png"
 
@@ -29,7 +28,7 @@ myst_enable_extensions = [
     "html_image",
 ]
 
-html_static_path = ["_static"]
+html_theme_path = ['_themes']             
+html_theme = 'my_scientific_theme'        
 
-def setup(app):
-    app.add_css_file("custom.css")
+html_static_path = ['_static']            

@@ -1,4 +1,5 @@
 Qens
 ===================
 
-Welcome to QENS library docs.
+.. include:: ../README.md
+   :parser: myst_parser.sphinx_

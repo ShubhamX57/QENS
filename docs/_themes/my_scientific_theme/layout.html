@@ -8,18 +8,18 @@
     {% block htmltitle %}
     <title>{{ title|striptags|e }}{% if titlesuffix %} - {{ titlesuffix }}{% endif %}</title>
     {% endblock %}
-    {# --- CSS: use css_files (Sphinx >=7.0) --- #}
-    {% for css in css_files %}
-        {% if css|attr("filename") %}
-            {{ css_tag(css) }}
-        {% else %}
-            <link rel="stylesheet" href="{{ pathto(css, 1) }}" type="text/css" />
-        {% endif %}
-    {% endfor %}
-    {# --- JavaScript --- #}
-    {% for js in script_files %}
-        <script async src="{{ pathto(js, 1) }}"></script>
-    {% endfor %}
+    {# --- CSS: use css_tag() for modern Sphinx, fallback to pathto() for plain strings --- #}
+    {%- for css in css_files %}
+      {%- if css|attr("filename") %}
+        {{ css_tag(css) }}
+      {%- else %}
+        <link rel="stylesheet" href="{{ pathto(css, 1) }}" type="text/css" />
+      {%- endif %}
+    {%- endfor %}
+    {# --- JavaScript: use js_tag() (the only correct way in Sphinx ≥ 7) --- #}
+    {%- for js in script_files %}
+      {{ js_tag(js) }}
+    {%- endfor %}
     {% if pageurl %}
         <link rel="canonical" href="{{ pageurl }}" />
     {% endif %}

@@ -45,7 +45,7 @@ pip install "qens[mcmc]"
 From source:
 
 ```bash
-git clone https://github.com/your-org/qens
+git clone https://github.com/ShubhamX57/QENS.git
 cd qens
 pip install -e ".[mcmc]"
 ```

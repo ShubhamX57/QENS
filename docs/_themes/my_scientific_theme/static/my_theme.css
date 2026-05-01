@@ -73,6 +73,15 @@ body {
     color: #fff;
     text-decoration: none;
     letter-spacing: 0.5px;
+    display: flex;               /* helps align logo and text */
+    align-items: center;
+}
+
+/* Logo sizing */
+.logo-img {
+    height: 32px;                /* visible, non-intrusive size */
+    width: auto;
+    margin-right: 12px;
 }
 
 .top-nav a {
@@ -85,7 +94,6 @@ body {
 .top-nav a:hover {
     color: #ffffff;
 }
-
 /* ---------- Layout ---------- */
 .page {
     display: flex;
@@ -385,10 +393,3 @@ div.math {
 }
 
 
-/* ---------- Logo in top bar ---------- */
-.logo-img {
-    height: 32px;          /* adjust to match your brand height */
-    width: auto;           /* keep aspect ratio */
-    vertical-align: middle;
-    margin-right: 12px;    /* space between logo and text */
-}

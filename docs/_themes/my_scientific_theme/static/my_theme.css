@@ -45,6 +45,7 @@ body {
     min-height: 100vh;
 }
 
+
 /* ---------- Top Bar ---------- */
 .top-bar {
     background: var(--navy);
@@ -94,6 +95,8 @@ body {
 .top-nav a:hover {
     color: #ffffff;
 }
+
+
 /* ---------- Layout ---------- */
 .page {
     display: flex;

@@ -1,4 +1,4 @@
-QENS Documentation
+Qens
 ===================
 
 Welcome to QENS library docs.

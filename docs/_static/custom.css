@@ -1,10 +1,172 @@
+
+body {
+    font-family: "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #1f2937;
+    background-color: #ffffff;
+}
+
+/* Improve heading hierarchy */
+h1, h2, h3, h4 {
+    font-weight: 600;
+    color: #111827;
+    letter-spacing: -0.02em;
+}
+
+h1 {
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 0.3em;
+}
+
+h2 {
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.2em;
+}
+
+/* -------- Sidebar (RTD Navigation) -------- */
+.wy-nav-side {
+    background: #0b1320;  /* deep scientific navy */
+}
+
 .wy-side-nav-search {
-    display: block;
-    width: 300px;
-    padding: .809em;
-    margin-bottom: .809em;
-    z-index: 200;
-    background-color: #000000;
-    text-align: center;
-    color: #fcfcfc;
+    background-color: #0b1320;
+    border-bottom: 1px solid #1f2a44;
+}
+
+.wy-side-nav-search input[type="text"] {
+    border-radius: 6px;
+    border: none;
+    padding: 8px;
+}
+
+/* Sidebar links */
+.wy-menu-vertical a {
+    color: #cbd5e1;
+}
+
+.wy-menu-vertical a:hover {
+    background-color: #1f2a44;
+    color: #ffffff;
+}
+
+/* Active item */
+.wy-menu-vertical li.current > a {
+    background-color: #2563eb;
+    color: white;
+    border-radius: 4px;
+}
+
+/* -------- Content Area -------- */
+.wy-nav-content {
+    max-width: 1000px;
+}
+
+/* Improve paragraph spacing */
+p {
+    margin-bottom: 1em;
+}
+
+/* -------- Code Blocks (important for scientific libs) -------- */
+code, pre {
+    font-family: "Fira Code", "Source Code Pro", monospace;
+    font-size: 14px;
+}
+
+div.highlight {
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #0f172a; /* dark scientific code block */
+}
+
+.highlight pre {
+    color: #e2e8f0;
+    padding: 12px;
+    overflow-x: auto;
+}
+
+/* Inline code */
+code.literal {
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 90%;
+}
+
+/* -------- Admonitions (notes, warnings, etc.) -------- */
+.admonition {
+    border-radius: 8px;
+    border-left-width: 6px;
+}
+
+.admonition.note {
+    background: #eff6ff;
+    border-left-color: #3b82f6;
+}
+
+.admonition.warning {
+    background: #fff7ed;
+    border-left-color: #f97316;
+}
+
+.admonition.tip {
+    background: #ecfdf5;
+    border-left-color: #10b981;
+}
+
+/* -------- Tables (important for scientific data) -------- */
+table.docutils {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+table.docutils th {
+    background: #f3f4f6;
+    font-weight: 600;
+}
+
+table.docutils td {
+    padding: 8px;
+}
+
+/* -------- Links -------- */
+a {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* -------- Top Logo Area -------- */
+.wy-side-nav-search > a img.logo {
+    max-height: 70px;
+    margin: 10px auto;
+}
+
+/* -------- Footer -------- */
+footer {
+    color: #6b7280;
+    font-size: 0.9em;
+}
+
+/* -------- Math (if using MyST / MathJax) -------- */
+.math {
+    font-size: 1.05em;
+}
+
+/* -------- Scrollbar (modern touch) -------- */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
 }

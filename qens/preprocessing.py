@@ -2,6 +2,8 @@
 Preprocessing: align the elastic peak to ω = 0 and assign each measurement a
 resolution function.
 
+elastic-peak alignment, resolution assignment
+
 """
 from __future__ import annotations
 
@@ -97,7 +99,7 @@ def assign_resolution(
     Modifies each dict in place, adding:
 
         ``sigma_res``   : Gaussian sigma in meV (Gaussian-fit fallback)
-        ``fwhm_res``    : 2.355 × sigma_res, in meV
+        ``fwhm_res``    : 2.355 x sigma_res, in meV
         ``res_source``  : one of "frozen_sample", "coh_file",
                           "raw_inc_inflated", "explicit_override"
         ``res_file``    : filename of the resolution reference, or None
@@ -142,7 +144,7 @@ def assign_resolution(
                       RuntimeWarning, stacklevel=2)
 
 
-    # auto-pick: every frozen INC file is a resolution ref for its Eᵢ
+    # auto-pick: every frozen INC file is a resolution ref for its E_i, does this by ensuring inc spectrum is below threshold temp
     for fname, d in dataset.items():
         if (d["kind"] == "inc"
                 and d["temp"] <= cfg.frozen_temp_threshold

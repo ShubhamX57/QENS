@@ -121,7 +121,7 @@ body {
     color: var(--navy);
 }
 
-/* Sidebar navigation – overrides Sphinx toctree styles */
+/* Sidebar navigation */
 .sidebar ul {
     list-style: none;
     padding: 0;
@@ -152,7 +152,6 @@ body {
     font-weight: 500;
 }
 
-/* Indentation for nested toctree levels */
 .sidebar ul ul {
     padding-left: 1rem;
 }
@@ -191,6 +190,33 @@ a {
 a:hover {
     text-decoration: underline;
     color: #1a365d;
+}
+
+/* ---------- Heading Permalinks (clean # on hover) ---------- */
+a.headerlink {
+    font-size: 0;                  /* hide the default pilcrow ¶ */
+    text-decoration: none;
+    margin-left: 6px;
+    visibility: hidden;
+}
+
+a.headerlink::after {
+    content: "#";
+    font-size: 0.9rem;
+    color: #a0aec0;
+}
+
+h1:hover a.headerlink,
+h2:hover a.headerlink,
+h3:hover a.headerlink,
+h4:hover a.headerlink,
+h5:hover a.headerlink,
+h6:hover a.headerlink {
+    visibility: visible;
+}
+
+a.headerlink:hover::after {
+    color: var(--accent);
 }
 
 /* ---------- Code ---------- */
@@ -356,11 +382,4 @@ div.math {
     .content {
         padding: 1.5rem;
     }
-}
-
-
-.logo-img {
-    height: 28px;
-    margin-right: 10px;
-    vertical-align: middle;
 }

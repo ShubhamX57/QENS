@@ -26,9 +26,8 @@
     <header class="top-bar">
         <div class="top-bar-inner">
             <a class="brand" href="{{ pathto(master_doc) }}">
-                {% if logo_url %}
-                    <img src="{{ pathto('_static/' + logo_url, 1) }}" alt="Logo" class="logo-img" />
-                {% endif %}
+                {# Force the light logo (always visible on navy background) #}
+                <img src="{{ pathto('_static/qens_logo_light.png', 1) }}" alt="Logo" class="logo-img" />
                 {{ project }}
             </a>
             <nav class="top-nav">

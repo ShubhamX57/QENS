@@ -27,3 +27,4 @@ html_theme = 'my_scientific_theme'
 
 
 html_logo = 'qens_logo_dark.png'
+html_static_path = ['_static']

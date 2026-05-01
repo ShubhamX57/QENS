@@ -4,9 +4,11 @@
 
 
 # qens — Quasi-Elastic Neutron Scattering analysis
+[![Documentation Status](https://readthedocs.org/projects/qens/badge/?version=latest)](https://qens.readthedocs.io/en/latest/)
+
+[![Python: 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python: 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 
 End-to-end Python toolbox for analysing **Quasi-Elastic Neutron Scattering**
 data from ISIS Mantid `.nxspe` files (IRIS, OSIRIS, LET, MARI, MAPS, …) and

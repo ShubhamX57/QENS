@@ -1,3 +1,8 @@
 sphinx
 sphinx-rtd-theme
 myst-parser
+numpy
+scipy
+h5py
+matplotlib
+emcee

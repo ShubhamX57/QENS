@@ -26,4 +26,4 @@ html_theme_path = ['_themes']
 html_theme = 'my_scientific_theme'
 
 
-
+html_logo = 'qens_logo_dark.png'

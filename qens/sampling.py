@@ -1,369 +1,275 @@
 """
-sampling.py — MCMC posterior sampling for the CE diffusion model
-================================================================
+MCMC over a registered forward model.
 
-Entry point
------------
-``run_mcmc`` — preferred function.  Uses emcee (affine-invariant ensemble
-sampler) if installed; falls back to a hand-written Metropolis-Hastings
-implementation if emcee is unavailable.
-
-Sampler choice
---------------
-emcee (default):
-    An affine-invariant ensemble sampler.  32 walkers propose moves based on
-    the positions of other walkers ("stretch move"), making it efficient on
-    correlated posteriors.  The (D, l) posterior is correlated because τ =
-    l²/(6D) ties the two parameters together.  Standard Metropolis would need
-    careful tuning of the proposal covariance; emcee adapts automatically.
-
-Metropolis-Hastings (fallback):
-    4 independent chains with Gaussian proposals on D and log(l).  The
-    log-normal proposal on l keeps it positive without explicit truncation.
-    Convergence is checked via the Gelman-Rubin R-hat statistic.
-
-Convergence diagnostics
------------------------
-``gelman_rubin`` — R-hat statistic.  R-hat < 1.1 indicates that all chains
-are sampling from the same distribution.  R-hat > 1.1 means the chains have
-not mixed — increase n_warmup or check for multimodality.
-
-Posterior samples format
-------------------------
-The returned ``samples`` array has shape (N_samples, 2):
-    samples[:, 0] = D values (Å²/ps)
-    samples[:, 1] = l values (Å)   — absolute value enforced
-
-Derived quantities (e.g. τ = l²/6D) are computed from these samples in
-``plot_posteriors`` and ``summarise``, propagating the full D-l correlation.
 """
-
 from __future__ import annotations
 
 import numpy as np
 
-from .fitting import log_posterior
 from .config  import Config
+from .fitting import log_posterior
+from .models  import get_model
+
+__all__ = [
+    "run_mcmc", "summarise", "summarise_samples", "gelman_rubin",
+]
 
 
-# ── Convergence diagnostic ────────────────────────────────────────────────────
 
-def gelman_rubin(chains: list) -> float:
+
+
+# diagnostics
+
+def gelman_rubin(chains: list[np.ndarray]) -> float:
     """
-    Compute the Gelman-Rubin R-hat convergence statistic for a single parameter.
+    Gelman-Rubin :math:'\\hat R' for a list of 1-D chains.
 
-    R-hat compares the variance within individual chains to the variance
-    between chain means.  Values close to 1.0 indicate convergence; values
-    above 1.1 suggest the chains have not yet explored the same region.
+    ''< 1.01'' is well-converged; ''> 1.1'' indicates problems.
 
-    Formula
-    -------
-        W   = mean within-chain variance
-        B   = n × variance of chain means   (between-chain variance × n)
-        V̂   = ((n−1)/n) · W + B/n
-        R̂   = √(V̂ / W)
-
-    Parameters
-    ----------
-    chains : list of array-like
-        Each element is a 1D array of posterior draws for one parameter from
-        one chain.  All chains are truncated to the length of the shortest.
-
-    Returns
-    -------
-    float
-        R-hat.  Returns nan if within-chain variance is zero (all chains stuck).
-
-    References
-    ----------
-    Gelman & Rubin (1992) "Inference from iterative simulation using multiple
-    sequences", Statistical Science.
     """
-    m = len(chains)                              # number of chains
-    n = min(len(c) for c in chains)             # truncate to shortest chain
+    m = len(chains)
+    n = min(len(c) for c in chains)
     chains = [np.asarray(c[:n]) for c in chains]
-
-    # Within-chain variance (averaged across chains)
     w = np.mean([c.var(ddof=1) for c in chains])
-
     if w == 0.0:
-        # All chains are stuck — can't compute a meaningful R-hat
         return float("nan")
-
-    # Between-chain variance (variance of chain means, scaled by n)
     chain_means = np.array([c.mean() for c in chains])
-    b           = n * chain_means.var(ddof=1)
-
-    # Pooled variance estimate
+    b = n * chain_means.var(ddof=1)
     var_hat = (1 - 1 / n) * w + b / n
-
     return float(np.sqrt(var_hat / w))
 
 
-# ── emcee sampler (primary) ───────────────────────────────────────────────────
 
-def _run_emcee(data_bins, sr, d_map, l_map, cfg):
+
+
+
+
+# emcee path
+
+def _initial_ball(
+    p_map: np.ndarray, n_walkers: int, prior_lo, prior_hi, rng,
+    fractional_jitter: float = 0.03,
+) -> np.ndarray:
     """
-    Run the emcee affine-invariant ensemble MCMC sampler.
+    
+    Initial Gaussian ball around MAP, clipped into the prior box."""
+    p_map = np.asarray(p_map, dtype=float)
+    lo = np.asarray(prior_lo, dtype=float)
+    hi = np.asarray(prior_hi, dtype=float)
+    pad = 1e-6 * (hi - lo)
 
-    Walkers are initialised with 5% Gaussian scatter around the MAP point
-    and clipped to remain inside the prior box.  After running
-    n_warmup + n_keep steps, the warmup is discarded and the remaining
-    samples are thinned by ``cfg.thin``.
+    def one():
+        p = p_map * (1 + rng.normal(0, fractional_jitter, p_map.size))
+        # nudge anything that landed at/below 0 up to a small positive value
+        p = np.where(p <= 0, np.maximum(p_map * 0.1, lo + pad), p)
+        return np.clip(p, lo + pad, hi - pad)
 
-    Parameters
-    ----------
-    data_bins : list
-        Output of ``build_data_bins``.
-    sr : float
-        Instrument resolution sigma (meV).
-    d_map, l_map : float
-        MAP estimates used to initialise walkers.
-    cfg : Config
+    return np.array([one() for _ in range(n_walkers)])
 
-    Returns
-    -------
-    numpy.ndarray, shape (N_samples, 2)
-        Posterior samples with columns [D, l].
-    """
+
+
+
+
+
+def _run_emcee(
+    data_bins, sigma_res, p_map, model, cfg, extras, verbose,
+):
     import emcee
+    fm = get_model(model)
+    rng = np.random.default_rng(cfg.random_seed)
+    p0 = _initial_ball(p_map, cfg.n_walkers, fm.prior_lo, fm.prior_hi, rng)
 
-    def log_prob(params):
-        """Wrapper around log_posterior for emcee (takes a single array)."""
-        return log_posterior(params[0], abs(params[1]), data_bins, sr)
+    def log_prob(p):
+        return log_posterior(p, data_bins, sigma_res, model=model, **extras)
 
-    ndim = 2  # number of free parameters: D and l
-    rng  = np.random.default_rng(cfg.random_seed)
-
-    # Initialise walkers: cluster around MAP with 5% spread, clip to prior
-    p0 = [
-        np.array([d_map, l_map]) * (1 + rng.normal(0, 0.05, ndim))
-        for _ in range(cfg.n_walkers)
-    ]
-    # Clip all walkers into the prior box to avoid -inf at step 0
-    p0 = [np.clip(p, [1e-3, 0.6], [2.9, 5.9]) for p in p0]
-
-    sampler     = emcee.EnsembleSampler(cfg.n_walkers, ndim, log_prob)
-    total_steps = cfg.n_warmup + cfg.n_keep
-
-    print(
-        f"  running emcee: {cfg.n_walkers} walkers × {total_steps} steps "
-        f"(thin={cfg.thin})"
-    )
-    sampler.run_mcmc(p0, total_steps, progress=True)
-
-    # Discard burn-in and thin the chain
+    sampler = emcee.EnsembleSampler(cfg.n_walkers, fm.n_params, log_prob)
+    total = cfg.n_warmup + cfg.n_keep
+    if verbose:
+        print(f"  emcee: {cfg.n_walkers} walkers × {total} steps "
+              f"(thin={cfg.thin}, n_dim={fm.n_params}, model={model!r})")
+    sampler.run_mcmc(p0, total, progress=False)
     samples = sampler.get_chain(discard=cfg.n_warmup, thin=cfg.thin, flat=True)
 
-    # Acceptance fraction — healthy range is 0.2–0.5 for emcee stretch moves
-    acc = float(np.mean(sampler.acceptance_fraction))
-    print(f"  acceptance fraction: {acc:.3f}")
-
-    # Autocorrelation time — ideally thin ≥ τ/2
-    try:
-        tau = sampler.get_autocorr_time(quiet=True)
-        print(f"  autocorrelation time: D={tau[0]:.1f}  l={tau[1]:.1f} steps")
-    except Exception:
-        print("  autocorrelation estimate failed (chain may be too short)")
-
+    if verbose:
+        print(f"  acceptance fraction: "
+              f"{np.mean(sampler.acceptance_fraction):.3f}")
+        try:
+            tau = sampler.get_autocorr_time(quiet=True)
+            print(f"  autocorrelation time: " +
+                  "  ".join(f"{t:.1f}" for t in tau))
+        except Exception:
+            pass
+        print(f"  total samples kept: {len(samples)}")
     return samples
 
 
-# ── Metropolis-Hastings fallback ──────────────────────────────────────────────
 
-def _run_mh(data_bins, sr, d_map, l_map, cfg):
-    """
-    Run 4 independent Metropolis-Hastings chains (fallback when emcee is absent).
 
-    Proposal distributions
-    ----------------------
-    D : Gaussian with std = d_map × 0.1
-    l : log-normal  (propose log(l) + Normal(0, 0.1)), ensures l > 0 always.
-        The Jacobian correction (log_l_new − log_l_cur) is applied in the
-        acceptance ratio to maintain detailed balance.
 
-    Parameters
-    ----------
-    data_bins : list
-        Output of ``build_data_bins``.
-    sr : float
-        Instrument resolution sigma (meV).
-    d_map, l_map : float
-        MAP estimates used to start each chain (with ±5% scatter).
-    cfg : Config
 
-    Returns
-    -------
-    numpy.ndarray, shape (N_samples, 2)
-        Stacked posterior samples from all 4 chains after thinning.
-    """
+
+# MH fallback
+
+def _run_mh(data_bins, sigma_res, p_map, model, cfg, extras, verbose):
+    fm = get_model(model)
     rng_global = np.random.default_rng(cfg.random_seed)
+    n_dim = fm.n_params
+    p_map = np.asarray(p_map, dtype=float)
+    step = np.maximum(np.abs(p_map) * 0.05, 1e-6)
+    n_total = cfg.n_warmup + cfg.n_keep
 
-    def _chain(start, n_steps, step_d, step_log_l, seed):
-        """
-        Run a single Metropolis-Hastings chain.
+    def chain(start, seed):
+        rng = np.random.default_rng(seed)
+        cur = start.copy()
+        cur_lp = log_posterior(cur, data_bins, sigma_res,
+                               model=model, **extras)
+        out = [cur.copy()]
+        n_acc = 0
+        for _ in range(n_total):
+            new = cur + rng.normal(0, step, n_dim)
+            new_lp = log_posterior(new, data_bins, sigma_res,
+                                   model=model, **extras)
+            if np.log(rng.random() + 1e-300) < new_lp - cur_lp:
+                cur, cur_lp = new, new_lp
+                n_acc += 1
+            out.append(cur.copy())
+        return np.array(out), n_acc / n_total
 
-        Parameters
-        ----------
-        start     : array-like [D, l] — starting position
-        n_steps   : total steps to run (including warmup)
-        step_d    : proposal std for D
-        step_log_l: proposal std for log(l)
-        seed      : integer RNG seed for this chain
-
-        Returns
-        -------
-        samples : ndarray, shape (n_steps+1, 2)
-        acc_frac: float — fraction of proposals accepted
-        """
-        rng_c         = np.random.default_rng(seed)
-        d_cur, l_cur  = float(start[0]), float(start[1])
-        cur_lp        = log_posterior(d_cur, l_cur, data_bins, sr)
-        samples       = [(d_cur, l_cur)]
-        n_acc         = 0
-
-        for _ in range(n_steps):
-            # Gaussian proposal for D
-            d_new = d_cur + rng_c.normal(0, step_d)
-
-            # Log-normal proposal for l: propose in log-space to keep l > 0
-            log_l_new = np.log(l_cur) + rng_c.normal(0, step_log_l)
-            l_new     = np.exp(log_l_new)
-
-            new_lp = log_posterior(d_new, l_new, data_bins, sr)
-
-            # Metropolis-Hastings acceptance ratio including Jacobian for log(l)
-            log_accept = new_lp - cur_lp + (log_l_new - np.log(l_cur))
-
-            if np.log(rng_c.random() + 1e-300) < log_accept:
-                # Accept proposal
-                d_cur, l_cur = d_new, l_new
-                cur_lp       = new_lp
-                n_acc       += 1
-
-            samples.append((d_cur, l_cur))
-
-        return np.array(samples), n_acc / n_steps
-
-    # Proposal step sizes based on MAP values
-    step_d     = d_map * 0.1
-    step_log_l = 0.1
-    n_total    = cfg.n_warmup + cfg.n_keep
-
+    n_chains = 4
     chains = []
-    print(f"  running 4 MH chains × {n_total} steps (thin={cfg.thin})")
-
-    for cid in range(4):
-        # Small random perturbation around MAP for each chain
-        start = np.array([d_map, l_map]) * (1 + rng_global.normal(0, 0.05, 2))
-        start = np.clip(start, [1e-3, 0.6], [2.9, 5.9])
-
-        chain, acc = _chain(start, n_total, step_d, step_log_l,
-                            seed=cfg.random_seed + cid)
-
-        # Discard warmup and thin
-        chains.append(chain[cfg.n_warmup :: cfg.thin])
-        print(f"  chain {cid+1}: acceptance={acc:.3f}  kept={len(chains[-1])}")
-
-    # ── Gelman-Rubin convergence check ────────────────────────────────────────
-    rhat_d = gelman_rubin([c[:, 0] for c in chains])
-    rhat_l = gelman_rubin([c[:, 1] for c in chains])
-    print(f"  R-hat: D={rhat_d:.4f}  l={rhat_l:.4f}")
-
-    if rhat_d > 1.1 or rhat_l > 1.1:
-        print(
-            "  WARNING: R-hat > 1.1 — chains may not have converged.  "
-            "Consider increasing n_warmup."
-        )
-
+    if verbose:
+        print(f"  MH fallback: {n_chains} chains × {n_total} steps "
+              f"(thin={cfg.thin}, n_dim={n_dim})")
+    for cid in range(n_chains):
+        start = p_map * (1 + rng_global.normal(0, 0.03, n_dim))
+        ch, acc = chain(start, cfg.random_seed + cid)
+        chains.append(ch[cfg.n_warmup::cfg.thin])
+        if verbose:
+            print(f"    chain {cid+1}: acceptance={acc:.3f}  "
+                  f"kept={len(chains[-1])}")
+    rhats = [gelman_rubin([c[:, i] for c in chains]) for i in range(n_dim)]
+    if verbose:
+        print(f"  Gelman-Rubin R̂: " + "  ".join(f"{r:.4f}" for r in rhats))
     return np.vstack(chains)
 
 
-# ── Public entry point ────────────────────────────────────────────────────────
+
+
+
+
+
+# top-level entry point
 
 def run_mcmc(
-    data_bins: list,
-    sr: float,
-    d_map: float,
-    l_map: float,
+    data_bins,
+    sigma_res,
+    p_map,
+    model: str = "anisotropic_rotor",
     cfg: Config | None = None,
+    verbose: bool = True,
+    **extras,
 ) -> np.ndarray:
-    """
-    Run MCMC sampling and return posterior samples of (D, l).
-
-    Automatically chooses emcee if installed, otherwise falls back to the
-    hand-written Metropolis-Hastings implementation.
+    """Run MCMC over a registered forward model.
 
     Parameters
     ----------
     data_bins : list
-        Output of ``build_data_bins``.
-    sr : float
-        Instrument resolution sigma (meV).
-    d_map, l_map : float
-        MAP estimates from ``find_map`` used to initialise walkers.
-    cfg : Config or None
+        From :func:'qens.fitting.build_data_bins'.
+
+    sigma_res : float | array | list[array]
+        Resolution: scalar Gaussian σ in meV, single measured kernel, or
+        one kernel per Q-bin.
+
+    p_map : array
+        MAP starting point (from :func:'qens.fitting.find_map').
+
+    model : str
+        Registered forward-model name.
+
+    cfg : Config
+
+    verbose : bool
+
+    extras :
+        Forwarded to the model's ''predict'' callable.
+
 
     Returns
     -------
-    numpy.ndarray, shape (N_samples, 2)
-        Posterior samples.  Column 0 = D (Å²/ps), column 1 = l (Å).
-        l values are guaranteed positive (abs applied before returning).
+    samples : ndarray of shape ''(n_kept, n_dim)''
 
-    Notes
-    -----
-    Total samples ≈ n_walkers × n_keep / thin  for emcee,
-                  ≈ 4 × n_keep / thin          for MH fallback.
     """
     if cfg is None:
         cfg = Config()
-
-    # Try importing emcee; fall back gracefully
     try:
-        import emcee        # noqa: F401
-        use_emcee = True
+        import emcee  # noqa: F401
+        return _run_emcee(data_bins, sigma_res, p_map, model, cfg,
+                          extras, verbose)
     except ImportError:
-        use_emcee = False
-        print("  emcee not found — using Metropolis-Hastings fallback")
-        print("  Install emcee for better performance: pip install emcee")
-
-    if use_emcee:
-        samples = _run_emcee(data_bins, sr, d_map, l_map, cfg)
-    else:
-        samples = _run_mh(data_bins, sr, d_map, l_map, cfg)
-
-    # Enforce l > 0 (the sampler may explore negative l via the stretch move)
-    samples[:, 1] = np.abs(samples[:, 1])
-
-    print(f"  total posterior samples: {len(samples)}")
-    return samples
+        if verbose:
+            print("  emcee not found — using Metropolis-Hastings fallback "
+                  "(consider: pip install emcee)")
+        return _run_mh(data_bins, sigma_res, p_map, model, cfg,
+                       extras, verbose)
 
 
-# ── Summary helper ────────────────────────────────────────────────────────────
 
-def summarise(arr: np.ndarray, label: str) -> tuple[float, float, float]:
+
+
+
+# summarisation
+
+def summarise(arr: np.ndarray, label: str = "", verbose: bool = True
+              ) -> tuple[float, float, float]:
     """
-    Print and return the median and 95% credible interval for a parameter.
+    Median and 95% credible interval for a single parameter chain.
+    
+    """
+    arr = np.asarray(arr)
+    lo, hi = np.percentile(arr, [2.5, 97.5])
+    med = float(np.median(arr))
+    if verbose and label:
+        print(f"    {label:<24}  median={med:.5f}   "
+              f"95% CI=[{lo:.5f}, {hi:.5f}]")
+    return med, float(lo), float(hi)
 
-    The 95% credible interval [lo, hi] = [2.5th, 97.5th percentile] means:
-    given this data and the prior, there is a 95% probability that the
-    parameter lies within [lo, hi].  This is a genuinely probabilistic
-    statement, unlike a frequentist confidence interval.
+
+
+
+def summarise_samples(
+    samples: np.ndarray,
+    model: str = "anisotropic_rotor",
+    derived: dict | None = None,
+    verbose: bool = True,
+) -> dict[str, tuple[float, float, float]]:
+    """
+    Per-parameter median + 95% CI for a registered model.
 
     Parameters
     ----------
-    arr : numpy.ndarray
-        1D array of posterior samples for one parameter.
-    label : str
-        Human-readable label printed in the summary line.
+    samples : ndarray, shape (n, n_dim)
+    
+    model : str
+        Registered model name (used to look up parameter names).
 
+    derived : dict, optional
+        ''{label: callable(samples) -> 1-D array}'' — extra derived
+        quantities to summarise (e.g. ''D_s / D_t'' for anisotropic).
+
+    verbose : bool
+
+    
     Returns
     -------
-    med : float — posterior median
-    lo  : float — 2.5th percentile (lower 95% CI bound)
-    hi  : float — 97.5th percentile (upper 95% CI bound)
+    dict[label, (median, lo95, hi95)]
+
+
     """
-    lo, hi = np.percentile(arr, [2.5, 97.5])
-    med    = float(np.median(arr))
-    print(f"  {label:<16}  median={med:.5f}   95% CI=[{lo:.5f}, {hi:.5f}]")
-    return med, float(lo), float(hi)
+    fm = get_model(model)
+    out: dict[str, tuple[float, float, float]] = {}
+    for i, name in enumerate(fm.param_names):
+        out[name] = summarise(samples[:, i], name, verbose=verbose)
+    if derived:
+        for label, fn in derived.items():
+            out[label] = summarise(fn(samples), label, verbose=verbose)
+    return out

@@ -383,3 +383,12 @@ div.math {
         padding: 1.5rem;
     }
 }
+
+
+/* ---------- Logo in top bar ---------- */
+.logo-img {
+    height: 32px;          /* adjust to match your brand height */
+    width: auto;           /* keep aspect ratio */
+    vertical-align: middle;
+    margin-right: 12px;    /* space between logo and text */
+}

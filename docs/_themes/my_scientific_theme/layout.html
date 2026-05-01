@@ -1,0 +1,47 @@
+{# layout.html #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{ metatags }}
+    {% block htmltitle %}
+    <title>{{ title|striptags|e }}{% if titlesuffix %} - {{ titlesuffix }}{% endif %}</title>
+    {% endblock %}
+    <link rel="stylesheet" href="{{ pathto('_static/' + style, 1) }}" type="text/css" />
+    {% for cssfile in css_files %}
+    <link rel="stylesheet" href="{{ pathto(cssfile, 1) }}" type="text/css" />
+    {% endfor %}
+    {% for jsfile in script_files %}
+    <script async src="{{ pathto(jsfile, 1) }}"></script>
+    {% endfor %}
+    {% if pageurl %}
+    <link rel="canonical" href="{{ pageurl }}" />
+    {% endif %}
+</head>
+<body>
+    <header class="top-bar">
+        <div class="top-bar-inner">
+            <a class="brand" href="{{ pathto(master_doc) }}">{{ project }}</a>
+            <nav class="top-nav">
+                <a href="https://github.com/your-org/your-repo">GitHub</a>
+                <a href="{{ pathto('genindex') }}">Index</a>
+            </nav>
+        </div>
+    </header>
+    <div class="page">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-title">{{ project }}</span>
+            </div>
+            {{ toctree(maxdepth=3, collapse=False, includehidden=True) }}
+        </aside>
+        <main class="content">
+            {% block body %} {% endblock %}
+        </main>
+    </div>
+    <footer class="footer">
+        <p>{% if copyright %}&copy; {{ copyright }}.{% endif %} Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> and a custom scientific theme.</p>
+    </footer>
+</body>
+</html>

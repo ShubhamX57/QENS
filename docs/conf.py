@@ -11,7 +11,7 @@ extensions = [
     "sphinx.ext.napoleon",
 ]
 
-html_theme = "sphinx_rtd_theme"
+html_theme = 'python_docs_theme'
 
 html_logo = "../logo/qens_logo_dark.png"
 

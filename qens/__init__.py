@@ -1,92 +1,92 @@
 """
-qens — Quasi-Elastic Neutron Scattering analysis
-=================================================
+qens — Quasi-Elastic Neutron Scattering analysis library.
 
-A modular Python library for the complete QENS analysis pipeline:
+Open source toolbox for end to end QENS data analysis on ISIS-format
+``.nxspe`` files (IRIS, OSIRIS, LET, MARI, MAPS, …) and any other
+Mantid produced inelastic neutron scattering data.
 
-    Load >> Preprocess >> Model >> Fit >> Sample >> Visualise
-
-Typical usage
--------------
->>> from qens import Config, load_dataset, fit_elastic_peak, assign_resolution
->>> from qens import build_data_bins, find_map, run_mcmc, summarise
->>> from qens import plotting
-
->>> cfg     = Config()
->>> dataset = load_dataset(cfg.files_to_fit, data_dir="data/")
->>> for d in dataset.values():
-...     fit_elastic_peak(d)
->>> assign_resolution(dataset)
-
->>> d_inc    = dataset[cfg.primary_file]
->>> bins     = build_data_bins(d_inc, cfg)
->>> d_map, l_map, tau_map = find_map(bins, d_inc["sigma_res"], cfg)
->>> samples  = run_mcmc(bins, d_inc["sigma_res"], d_map, l_map, cfg)
->>> summarise(samples[:, 0], "D (Å²/ps)")
-
-Module overview
----------------
-config       : Config dataclass — all analysis parameters in one place.
-io           : Read ISIS Mantid .nxspe (NeXus HDF5) files.
-preprocessing: Elastic peak alignment and instrument resolution assignment.
-models       : Diffusion model functions (CE, Fickian, SS) and spectral basis.
-fitting      : HWHM extraction, Bayesian log-posterior, MAP optimisation.
-sampling     : MCMC via emcee (or Metropolis-Hastings fallback).
-plotting     : All diagnostic and publication figures.
-constants    : Physical constants in SI and meV/Å/ps unit systems.
 """
+__version__ = "2.0.0"
+__author__  = "qens contributors"
+__license__ = "MIT"
 
-# ── Public API ────────────────────────────────────────────────────────────────
-# Each import below pulls the most commonly used symbol from its module so that
-# users can write `from qens import Config` instead of
-# `from qens.config import Config`.
 
+
+#  core dataclass
 from .config        import Config
 
-# Data loading
-from .io            import read_nxspe, read_nxspe_hdf5, load_dataset
 
-# Preprocessing
+
+#  IO + preprocessing
+from .io            import (
+    inspect_nxspe, read_nxspe, read_nxspe_with_overrides,
+    load_dataset, compute_q_from_2theta)
+
+
 from .preprocessing import fit_elastic_peak, assign_resolution
 
-# Physical models and spectral basis
-from .models        import ce, fickian, ss_model, lorentz, gnorm, make_basis
 
-# Fitting — HWHM extraction and Bayesian posterior
-from .fitting       import (extract_hwhm, save_hwhm_csv, build_data_bins,
-                            log_likelihood, log_prior, log_posterior, find_map)
 
-# MCMC sampling and convergence diagnostics
-from .sampling      import run_mcmc, summarise, gelman_rubin
 
-# Plotting (imported as a namespace so callers do `qens.plotting.plot_hwhm(...)`)
+#  models API
+from .models        import (
+    # primitives
+    lorentz, gnorm, lorentz_sum,
+    # translational HWHM
+    fickian_hwhm, ce_hwhm, ss_hwhm,
+    # rotational structure-factor utilities
+    rot_widths_isotropic, rot_widths_anisotropic, bessel_weights,
+    # forward model + registry
+    predict_sqw, ForwardModel,
+    register_model, get_model, available_models)
+
+
+
+
+#  fitting + sampling
+from .fitting       import (
+    build_data_bins, build_resolution_bins,
+    extract_hwhm, save_hwhm_csv,
+    log_likelihood, log_prior, log_posterior, find_map,
+)
+
+
+
+from .sampling      import (
+    run_mcmc, summarise, summarise_samples, gelman_rubin,
+)
+
+
+
+
+#  plotting (separate)
 from .              import plotting
 
-# ── Package metadata ──────────────────────────────────────────────────────────
-__version__ = "0.2.0"
-__author__  = "QENS Analysis Contributors"
 
-# Explicit public API — controls `from qens import *`
+
 __all__ = [
-    # Configuration
+    "__version__",
+    # config
     "Config",
-
-    # I/O
-    "read_nxspe", "read_nxspe_hdf5", "load_dataset",
-
-    # Preprocessing
+    # IO
+    "inspect_nxspe", "read_nxspe", "read_nxspe_with_overrides",
+    "load_dataset", "compute_q_from_2theta",
+    # preprocessing
     "fit_elastic_peak", "assign_resolution",
-
-    # Models
-    "ce", "fickian", "ss_model", "lorentz", "gnorm", "make_basis",
-
-    # Fitting
-    "extract_hwhm", "save_hwhm_csv", "build_data_bins",
+    # primitives
+    "lorentz", "gnorm", "lorentz_sum",
+    # translation
+    "fickian_hwhm", "ce_hwhm", "ss_hwhm",
+    # rotation
+    "rot_widths_isotropic", "rot_widths_anisotropic", "bessel_weights",
+    # forward
+    "predict_sqw", "ForwardModel",
+    "register_model", "get_model", "available_models",
+    # fitting
+    "build_data_bins", "build_resolution_bins",
+    "extract_hwhm", "save_hwhm_csv",
     "log_likelihood", "log_prior", "log_posterior", "find_map",
-
-    # Sampling
-    "run_mcmc", "summarise", "gelman_rubin",
-
-    # Plotting namespace
-    "plotting",
-]
+    # sampling
+    "run_mcmc", "summarise", "summarise_samples", "gelman_rubin",
+    # plotting
+    "plotting"]

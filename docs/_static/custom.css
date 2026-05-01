@@ -1,277 +1,71 @@
-/* ===== Custom RTD Scientific Theme ===== */
 
-/* ---------- Root Variables ---------- */
-:root {
-    /* Sidebar */
-    --sidebar-bg: #1b2a3a;         /* dark navy */
-    --sidebar-link: #cbd5e0;
-    --sidebar-link-hover: #ffffff;
-    --sidebar-current-bg: #2d4a6b;
-    --sidebar-current-border: #5b9bd5;
-
-    /* Main text */
-    --body-font: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    --heading-font: 'Georgia', 'Times New Roman', serif;
-    --code-font: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
-
-    --text-color: #222;
-    --link-color: #005b9f;
-    --link-hover: #003566;
-
-    /* Code blocks */
-    --code-bg: #f7f9fc;
-    --code-border: #d8e0ea;
-    --code-text: #2c3e50;
-
-    /* Admonitions */
-    --note-bg: #eef4fb;
-    --note-border: #5b9bd5;
-    --warning-bg: #fff8e4;
-    --warning-border: #e6a817;
-    --tip-bg: #eef7ee;
-    --tip-border: #5ca85c;
-    --danger-bg: #fdf0f0;
-    --danger-border: #d35b5b;
-
-    /* Tables */
-    --table-header-bg: #2c3e50;
-    --table-header-text: #ffffff;
-    --table-row-alt: #f4f7fb;
+/* Use a wider max-width for documentation text (like many NumPy/SciPy pages) */
+div.body {
+    max-width: 960px;
 }
 
-/* ---------- Typography ---------- */
-body {
-    font-family: var(--body-font);
-    color: var(--text-color);
-    line-height: 1.7;
-}
-
-h1, h2, h3, h4, h5, h6 {
-    font-family: var(--heading-font);
-    font-weight: 600;
-    color: #1a202c;
-    margin-top: 1.8em;
-    margin-bottom: 0.6em;
-}
-
-h1 { font-size: 2.3rem; border-bottom: 3px solid #2c3e50; padding-bottom: 0.3rem; }
-h2 { font-size: 1.8rem; border-bottom: 1px solid #d0d7de; padding-bottom: 0.2rem; }
-h3 { font-size: 1.5rem; }
-h4 { font-size: 1.25rem; }
-
-p { margin-bottom: 1.2rem; }
-
-/* ---------- Links ---------- */
-a {
-    color: var(--link-color);
-    text-decoration: none;
-}
-a:hover {
-    color: var(--link-hover);
-    text-decoration: underline;
-}
-
-/* ---------- Sidebar Overrides (RTD) ---------- */
-.wy-side-nav-search {
-    background-color: var(--sidebar-bg);
-}
-.wy-side-nav-search > a {
-    font-family: var(--heading-font);
-    font-size: 1.4rem;
-    color: #fff;
-    font-weight: 600;
-}
-.wy-side-nav-search > div.version {
-    color: #a0b4c8;
-}
-
-.wy-menu-vertical header, .wy-menu-vertical p.caption {
-    color: #7fa3c1;
-    font-family: var(--heading-font);
-    font-size: 0.95rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.wy-menu-vertical a {
-    color: var(--sidebar-link);
-    font-weight: 400;
-}
-.wy-menu-vertical a:hover {
-    background-color: #233a51;
-    color: var(--sidebar-link-hover);
-}
-.wy-menu-vertical li.current {
-    background: var(--sidebar-current-bg);
-}
-.wy-menu-vertical li.current > a {
-    color: #ffffff;
-    font-weight: 500;
-    border-right: 3px solid var(--sidebar-current-border);
-}
-.wy-menu-vertical li.toctree-l1.current > a {
-    border-right: none;
-    background: var(--sidebar-current-bg);
-}
-.wy-menu-vertical li.toctree-l2.current > a,
-.wy-menu-vertical li.toctree-l3.current > a {
-    background: #314c64;
-    border-right: 3px solid var(--sidebar-current-border);
-}
-
-/* ---------- Code Blocks ---------- */
-code, pre {
-    font-family: var(--code-font);
+/* Code blocks: slightly softer background, thin border, and rounded corners */
+pre {
+    background: #f8fafc;
+    border: 1px solid #dce3ea;
+    border-radius: 6px;
+    padding: 1.2rem;
     font-size: 0.92rem;
+    line-height: 1.6;
 }
 
 code.literal {
-    background: #f0f4f8;
-    border: 1px solid #d5dfe8;
-    padding: 0.2em 0.4em;
+    background: #eff3f7;
+    border: 1px solid #cfdbe6;
+    padding: 0.15em 0.4em;
     border-radius: 4px;
-    color: #2c3e50;
+    font-size: 0.9rem;
 }
 
-pre {
-    background: var(--code-bg);
-    border: 1px solid var(--code-border);
-    border-radius: 6px;
-    padding: 1.2rem;
-    overflow-x: auto;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-    margin: 1.5rem 0;
-}
-
-pre code {
-    background: transparent;
-    border: none;
-    padding: 0;
-    color: var(--code-text);
-}
-
-/* ---------- Admonitions ---------- */
-div.admonition {
-    border-radius: 6px;
-    padding: 1rem 1.4rem;
-    margin: 1.8rem 0;
-    border-left: 5px solid;
-    background: #fafbfc;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-
-div.admonition p.admonition-title {
-    font-family: var(--heading-font);
-    font-weight: 600;
-    font-size: 1.05rem;
-    margin-top: 0;
-    margin-bottom: 0.6rem;
-}
-
-div.note {
-    background: var(--note-bg);
-    border-color: var(--note-border);
-}
-div.note .admonition-title {
-    color: #2c5282;
-}
-
-div.warning {
-    background: var(--warning-bg);
-    border-color: var(--warning-border);
-}
-div.warning .admonition-title {
-    color: #975a16;
-}
-
-div.tip, div.hint {
-    background: var(--tip-bg);
-    border-color: var(--tip-border);
-}
-div.tip .admonition-title {
-    color: #276749;
-}
-
-div.danger, div.error {
-    background: var(--danger-bg);
-    border-color: var(--danger-border);
-}
-div.danger .admonition-title {
-    color: #9b2c2c;
-}
-
-/* ---------- Tables ---------- */
-table.docutils {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1.8rem 0;
-    font-size: 0.95rem;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
-
+/* Tables: light header with a scientific palette, subtle row stripes */
 table.docutils thead th {
-    background: var(--table-header-bg);
-    color: var(--table-header-text);
-    padding: 0.75rem 1rem;
-    text-align: left;
+    background: #1e3b5a;
+    color: #ffffff;
     font-weight: 600;
-    font-family: var(--heading-font);
-    letter-spacing: 0.3px;
+    padding: 0.7rem 1rem;
 }
 
 table.docutils tbody td {
-    padding: 0.65rem 1rem;
+    padding: 0.6rem 1rem;
     border-bottom: 1px solid #e2e8f0;
 }
 
 table.docutils tbody tr:nth-child(even) {
-    background: var(--table-row-alt);
+    background: #f8fafd;
 }
 
-table.docutils tbody tr:hover {
-    background: #eaf0f8;
+/* Admonitions: slightly more muted, professional colors */
+div.admonition {
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
-/* ---------- Math ---------- */
-.math {
-    font-size: 1.05rem;
-    padding: 0.4rem 0;
-    display: inline-block;
+div.note {
+    background: #eef4fb;
+    border-left: 4px solid #5b9bd5;
+}
+div.warning {
+    background: #fff8e4;
+    border-left: 4px solid #e6a817;
+}
+div.tip {
+    background: #eef7ee;
+    border-left: 4px solid #5ca85c;
 }
 
-div.math {
-    margin: 1.5rem 0;
-    overflow-x: auto;
+/* Headings: keep Python theme style but add a little serif feel for scientific docs */
+h1, h2, h3 {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-weight: 600;
+    color: #1a202c;
 }
 
-/* ---------- Scrollbar (Webkit) ---------- */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-::-webkit-scrollbar-track {
-    background: #edf2f7;
-}
-::-webkit-scrollbar-thumb {
-    background: #a0aec0;
-    border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #718096;
-}
-
-/* ---------- Miscellaneous ---------- */
-/* Improve blockquote appearance */
-blockquote {
-    border-left: 4px solid #b0c4de;
-    background: #f5f9ff;
-    padding: 0.8rem 1.4rem;
-    margin: 1.2rem 0;
-    color: #334;
-    font-style: italic;
-}
-
-/* Slightly tighten up the RTD footer */
-.rst-footer-buttons {
-    margin-top: 2.5rem;
+h2 {
+    border-bottom: 1px solid #d0d7de;
+    padding-bottom: 0.3rem;
 }

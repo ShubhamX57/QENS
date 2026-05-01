@@ -26,4 +26,4 @@ html_theme_path = ['_themes']
 html_theme = 'my_scientific_theme'
 
 
-html_static_path = ['_static']
+

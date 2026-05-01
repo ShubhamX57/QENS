@@ -1,4 +1,4 @@
-{# layout.html #}
+{# layout.html – custom scientific theme for Sphinx >= 7.0 #}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,40 +8,59 @@
     {% block htmltitle %}
     <title>{{ title|striptags|e }}{% if titlesuffix %} - {{ titlesuffix }}{% endif %}</title>
     {% endblock %}
-    <link rel="stylesheet" href="{{ pathto('_static/' + style, 1) }}" type="text/css" />
-    {% for cssfile in css_files %}
-    <link rel="stylesheet" href="{{ pathto(cssfile, 1) }}" type="text/css" />
+    {# --- CSS: use css_files (Sphinx >=7.0) --- #}
+    {% for css in css_files %}
+        {% if css|attr("filename") %}
+            {{ css_tag(css) }}
+        {% else %}
+            <link rel="stylesheet" href="{{ pathto(css, 1) }}" type="text/css" />
+        {% endif %}
     {% endfor %}
-    {% for jsfile in script_files %}
-    <script async src="{{ pathto(jsfile, 1) }}"></script>
+    {# --- JavaScript --- #}
+    {% for js in script_files %}
+        <script async src="{{ pathto(js, 1) }}"></script>
     {% endfor %}
     {% if pageurl %}
-    <link rel="canonical" href="{{ pageurl }}" />
+        <link rel="canonical" href="{{ pageurl }}" />
     {% endif %}
 </head>
 <body>
+    {# --- Top navigation bar --- #}
     <header class="top-bar">
         <div class="top-bar-inner">
-            <a class="brand" href="{{ pathto(master_doc) }}">{{ project }}</a>
+            <a class="brand" href="{{ pathto(master_doc) }}">
+                {% if logo_url %}
+                    <img src="{{ pathto('_static/' + logo_url, 1) }}" alt="Logo" class="logo-img" />
+                {% endif %}
+                {{ project }}
+            </a>
             <nav class="top-nav">
-                <a href="https://github.com/your-org/your-repo">GitHub</a>
+                <a href="https://github.com/ShubhamX57/QENS">GitHub</a>
                 <a href="{{ pathto('genindex') }}">Index</a>
             </nav>
         </div>
     </header>
+
     <div class="page">
+        {# --- Sidebar --- #}
         <aside class="sidebar">
             <div class="sidebar-header">
                 <span class="sidebar-title">{{ project }}</span>
             </div>
             {{ toctree(maxdepth=3, collapse=False, includehidden=True) }}
         </aside>
+
+        {# --- Main content --- #}
         <main class="content">
             {% block body %} {% endblock %}
         </main>
     </div>
+
     <footer class="footer">
-        <p>{% if copyright %}&copy; {{ copyright }}.{% endif %} Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> and a custom scientific theme.</p>
+        <p>
+            {% if copyright %}&copy; {{ copyright }}.{% endif %}
+            Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> and a custom scientific theme.
+        </p>
     </footer>
 </body>
 </html>

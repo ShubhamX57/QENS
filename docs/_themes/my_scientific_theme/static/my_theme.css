@@ -361,3 +361,10 @@ div.math {
         padding: 1.5rem;
     }
 }
+
+
+.logo-img {
+    height: 28px;
+    margin-right: 10px;
+    vertical-align: middle;
+}

@@ -29,13 +29,3 @@ myst_enable_extensions = [
     "html_image",
 ]
 
-.wy-side-nav-search {
-    display: block;
-    width: 300px;
-    padding: .809em;
-    margin-bottom: .809em;
-    z-index: 200;
-    background-color: #000000;
-    text-align: center;
-    color: #fcfcfc
-}

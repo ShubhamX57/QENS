@@ -1,42 +1,54 @@
 """
-plotting.py — Diagnostic and publication figures for QENS analysis
-===================================================================
+Figures.
 
-All plots follow a consistent visual style and accept an optional
-``save_path`` argument.  Every function returns the (fig, axes) tuple so
-callers can add further annotations or adjust limits without re-running the
-analysis.
+Each function here takes already processed inputs (datasets, samples,
+HWHM table) and writes out a single figure. None of them re-compute the
+physics — they're presentation-only. The forward-model evaluations are
+done by :mod:'qens.models' and called by the inference layer.
 
-Functions
----------
-plot_overview        : Quick spectral overview — one panel per dataset.
-plot_spectrum        : Single-Q spectrum with elastic/QE decomposition.
-plot_sqw_maps        : S(Q, ω) colour maps (COH and INC side-by-side).
-plot_hwhm            : Γ(Q) vs Q² with MCMC posterior fan and MAP curve.
-plot_posteriors      : Marginal posterior histograms for D, l, τ.
-plot_joint_posterior : Joint (D, l) scatter plot with KDE contours.
+All figures use the same colour scheme:
 
-Colour conventions
-------------------
-#2471a3  : blue  — posterior fan / data points
-#c0392b  : red   — MAP / fit curve
-#e67e22  : amber — quasi-elastic annotations
-#1e8449  : green — jump-length related quantities
-white/grey: resolution reference lines
+    elastic component     — blue   ''#1565c0''
+    quasi-elastic         — orange ''#e67e22''
+    fit / MAP             — red    ''#c0392b''
+    posterior fan / data  — slate  ''#2471a3''
+    resolution            — grey   ''#888''
+
+Save by passing ''save_path''; if None the figure is returned for the
+user to handle.
+
+
 """
+
 
 from __future__ import annotations
 
+
+from typing import Iterable
+
+
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm, LinearSegmentedColormap
-from scipy.ndimage import gaussian_filter
-from scipy.optimize import nnls
-from scipy.signal import fftconvolve
+from matplotlib.colors            import LogNorm, LinearSegmentedColormap
+from scipy.ndimage                import gaussian_filter
+from scipy.optimize               import nnls
 
-from .models import ce, fickian, gnorm, lorentz
 
-# Custom colourmap for S(Q, ω) maps — dark blue → orange → dark red
+from .models import (
+    fickian_hwhm, ce_hwhm, ss_hwhm, get_model,
+)
+
+
+__all__ = [
+    "plot_overview",
+    "plot_sqw_map",
+    "plot_per_q_fits",
+    "plot_hwhm_vs_q2",
+    "plot_posteriors",
+    "plot_joint_posterior",
+]
+
+
 _SQW_CMAP = LinearSegmentedColormap.from_list(
     "qens",
     ["#0a0e1a", "#0c2d6b", "#1565c0", "#42a5f5",
@@ -45,649 +57,389 @@ _SQW_CMAP = LinearSegmentedColormap.from_list(
 )
 
 
+
+
 def _despine(ax):
-    """Remove the top and right spines for a cleaner plot style."""
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
 
-# ── Overview ──────────────────────────────────────────────────────────────────
+
+
+def _save(fig, save_path):
+    if save_path:
+        fig.savefig(save_path, bbox_inches="tight", dpi=150)
+
+
+# overview of all loaded files
 
 def plot_overview(dataset: dict, save_path: str | None = None):
     """
-    Plot a quick spectral overview — one panel per loaded dataset.
-
-    Averages the low-Q detectors in each dataset and plots the normalised
-    spectrum in a narrow energy window.  Useful for spotting calibration
-    issues, bad datasets, or unexpected broadening before running fits.
-
-    Colour coding:
-        green  — frozen sample (T ≤ 270 K) — narrow elastic line
-        red    — warm incoherent sample     — broadened quasi-elastic wings
-        blue   — coherent reference         — used for resolution
-
-    Parameters
-    ----------
-    dataset : dict
-        Dict of dataset dicts from ``load_dataset``.
-    save_path : str or None
-        If provided, save the figure to this path at 150 dpi.
-
-    Returns
-    -------
-    fig, axes : matplotlib Figure and Axes array.
+    One-line elastic-peak summary per loaded file. Useful sanity check
+    after :func:'qens.preprocessing.assign_resolution'.
     """
-    fnames = sorted(dataset.keys())
-    n      = len(fnames)
-    ncols  = min(4, n)
-    nrows  = (n + ncols - 1) // ncols
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4.5 * ncols, 4.0 * nrows))
-    axes = np.array(axes).flatten()
+    names = sorted(dataset)
+    n = len(names)
+    ncols = min(4, n)
+    nrows = (n + ncols - 1) // ncols
+    fig, axes = plt.subplots(nrows, ncols,
+                             figsize=(4.5 * ncols, 3.5 * nrows),
+                             squeeze=False)
+    axes = axes.flatten()
 
-    for ax, fname in zip(axes, fnames):
-        d    = dataset[fname]
-        e    = d["e"]
+    for ax, name in zip(axes, names):
+        d = dataset[name]
         good = d["good"]
-
-        # Average lowest-Q fifth of good detectors — smallest quasi-elastic width
         n_lo = max(2, len(good) // 5)
-        avg  = np.nanmean([d["data"][good[j]] for j in range(n_lo)], axis=0)
-        avg  = np.where(np.isfinite(avg), avg, 0.0)
-
-        # Energy window: narrower than ewin_hwhm to focus on the elastic peak
+        avg = np.nanmean([d["data"][good[j]] for j in range(n_lo)], axis=0)
+        avg = np.where(np.isfinite(avg), avg, 0.0)
         ewin = min(0.5 * d["ei"], 1.2)
-        mask = (e >= -ewin) & (e <= ewin)
-
-        # Normalise to peak
-        peak = avg[mask].max()
-        y    = avg[mask] / peak if peak > 0 else avg[mask]
-
-        # Colour encodes sample type / temperature
-        col = (
-            "#2ca02c" if d["temp"] <= 270 else
-            "#c0392b" if d["kind"] == "inc" else
-            "#2471a3"
-        )
-        ax.plot(e[mask], y, color=col, lw=1.8)
-        ax.axvline(0, color="#aaa", lw=0.8, ls=":")
-        ax.set_title(fname, fontsize=7, color=col)
-        ax.set_xlabel("ω (meV)", fontsize=7)
-        ax.grid(True, alpha=0.2)
-        ax.tick_params(labelsize=6)
-
-        # Inset: elastic peak position and resolution FWHM
-        info = (
-            f"E₀={d.get('e0', 0):+.3f} meV\n"
-            f"FWHM={d.get('fwhm_res', 0)*1000:.0f} µeV "
-            f"[{d.get('res_source', '?')}]"
-        )
-        ax.text(
-            0.03, 0.96, info,
-            transform=ax.transAxes, va="top", fontsize=5.5,
-            bbox=dict(boxstyle="round", fc="white", alpha=0.8),
-        )
+        m = (d["e"] >= -ewin) & (d["e"] <= ewin)
+        peak = avg[m].max()
+        y = avg[m] / peak if peak > 0 else avg[m]
+        col = ("#2ca02c" if d["temp"] <= 270
+               else "#c0392b" if d["kind"] == "inc" else "#2471a3")
+        ax.plot(d["e"][m], y, color=col, lw=1.5)
+        ax.axvline(0, color="#aaa", lw=0.7, ls=":")
+        ax.set_title(name, fontsize=8, color=col)
+        ax.set_xlabel("ω (meV)", fontsize=8)
+        ax.tick_params(labelsize=7)
+        ax.grid(alpha=0.18)
+        info = (f"E₀={d.get('e0', 0):+.3f} meV\n"
+                f"FWHM={d.get('fwhm_res', 0)*1000:.0f} µeV "
+                f"[{d.get('res_source', '?')}]")
+        ax.text(0.03, 0.96, info, transform=ax.transAxes, va="top",
+                fontsize=6.5,
+                bbox=dict(boxstyle="round", fc="white", alpha=0.8))
         _despine(ax)
-
-    # Hide unused axes in the grid
     for ax in axes[n:]:
         ax.axis("off")
-
-    fig.suptitle(
-        "All datasets  |  green=frozen  red=INC  blue=COH", fontsize=10
-    )
-    plt.tight_layout()
-
-    if save_path:
-        fig.savefig(save_path, bbox_inches="tight", dpi=150)
-        print(f"  figure saved → {save_path}")
-
+    fig.suptitle("loaded datasets   green=frozen   red=INC   blue=COH",
+                 fontsize=10)
+    fig.tight_layout()
+    _save(fig, save_path)
     return fig, axes
 
 
-# ── Single-Q spectrum ─────────────────────────────────────────────────────────
 
-def plot_spectrum(
-    d_inc,
-    d_map: float,
-    l_map: float,
-    q_target: float = 1.06,
-    d_res=None,
-    ewin: float = 0.8,
-    save_path: str | None = None,
-):
+# 2 D S(Q,ω) map for one dataset
+def plot_sqw_map(d: dict, ewin: float = 1.2, save_path: str | None = None):
     """
-    Plot the measured spectrum at a target Q value with the CE model fit.
-
-    Shows the elastic and quasi-elastic components as shaded fills, the
-    measured data with error bars, and optionally the resolution reference
-    spectrum for comparison.
-
-    Parameters
-    ----------
-    d_inc : dict
-        Main incoherent dataset dict.
-    d_map, l_map : float
-        MAP diffusion coefficient (Å²/ps) and jump length (Å).
-    q_target : float
-        Target Q value (Å⁻¹).  Detectors within ±0.10 Å⁻¹ are averaged.
-    d_res : dict or None
-        Optional resolution reference dataset.  If provided, its spectrum
-        is overplotted as a dashed red line.
-    ewin : float
-        Half-width of the energy window to display (meV).
-    save_path : str or None
-
-    Returns
-    -------
-    fig, ax : matplotlib Figure and Axes.
+    Single S(Q,ω) heatmap, log-scaled.
+    
     """
-    gp    = d_inc["good"]
-    qg    = d_inc["q"][gp]
-    sr    = d_inc["sigma_res"]
-    emask = (d_inc["e"] >= -ewin) & (d_inc["e"] <= ewin)
-    ew    = d_inc["e"][emask]
-
-    # Find detectors near q_target; fall back to 4 nearest if none within 0.10
-    near = np.where(np.abs(qg - q_target) < 0.10)[0]
-    if len(near) == 0:
-        near = np.argsort(np.abs(qg - q_target))[:4]
-
-    # Average spectrum and error across selected detectors
-    spec = np.nanmean([d_inc["data"][gp[j]][emask] for j in near], axis=0)
-    errs = np.sqrt(np.nanmean([d_inc["errs"][gp[j]][emask]**2 for j in near], axis=0))
-    spec = np.where(np.isfinite(spec), spec, 0.0)
-    err_floor = max(spec.max() * 0.05, 1e-12)
-    errs = np.where(errs > 0, errs, err_floor)
-
-    # Normalise to peak
-    peak    = spec.max()
-    sn, en  = spec / peak, errs / peak
-
-    # Build fine-grid model for smooth plotting
-    wf    = np.linspace(-ewin, ewin, 1000)
-    dt    = wf[1] - wf[0]
-    gamma = float(ce(q_target, d_map, l_map))
-
-    el   = gnorm(wf, sr);   el  /= el.max()
-    ql_  = fftconvolve(lorentz(wf, gamma), gnorm(wf, sr), mode="same") * dt
-    ql   = ql_ / ql_.max() if ql_.max() > 0 else ql_
-
-    # Solve NNLS on the fine grid
-    sn_fine    = np.interp(wf, ew, sn)
-    amp, _     = nnls(np.column_stack([el, ql, np.ones(len(wf))]), sn_fine)
-    fit        = amp[0] * el + amp[1] * ql + amp[2]
-
-    # Reduced chi-squared on the data grid
-    fit_on_data = np.interp(ew, wf, fit)
-    chi2r       = np.sum(((sn - fit_on_data) / en)**2) / max(len(ew) - 4, 1)
-
-    # ── Plot ──────────────────────────────────────────────────────────────────
-    fig, ax = plt.subplots(figsize=(8.5, 5.5))
-
-    # Shaded elastic and quasi-elastic regions
-    ax.fill_between(wf, amp[2], amp[0]*el + amp[2],
-                    alpha=0.22, color="#2471a3", label="elastic")
-    ax.fill_between(wf, amp[2], amp[1]*ql + amp[2],
-                    alpha=0.22, color="#e67e22", label="quasi-elastic")
-
-    # Measured data with error bars
-    ax.errorbar(ew, sn, yerr=en, fmt=".", color="#333", ms=3.5,
-                elinewidth=0.7, alpha=0.8,
-                label=f"data Q={qg[near].mean():.2f} Å⁻¹")
-
-    # Optional resolution reference overlay
-    if d_res is not None:
-        gc = d_res["good"]
-        qc = d_res["q"][gc]
-        mk = (d_res["e"] >= -ewin) & (d_res["e"] <= ewin)
-        ec = d_res["e"][mk]
-        nr = np.where(np.abs(qc - q_target) < 0.10)[0]
-        if len(nr) == 0:
-            nr = np.argsort(np.abs(qc - q_target))[:4]
-        rs = np.nanmean([d_res["data"][gc[j]][mk] for j in nr], axis=0)
-        rs = np.where(np.isfinite(rs), rs, 0.0)
-        if rs.max() > 0:
-            rs /= rs.max()
-        ax.plot(ec, rs, "--", color="#c0392b", lw=1.8,
-                label=f"resolution ({d_res['name']})")
-
-    # CE MAP fit with reduced chi-squared in legend
-    ax.plot(wf, fit, "-", color="#c0392b", lw=2.2,
-            label=rf"CE MAP $\chi^2_r={chi2r:.2f}$")
-
-    # Double-headed arrow showing HWHM
-    ax.annotate("", xy=(gamma, 0.50), xytext=(0, 0.50),
-                arrowprops=dict(arrowstyle="<->", color="#e67e22", lw=1.8))
-    ax.text(gamma / 2, 0.56, f"HWHM = {gamma*1000:.0f} µeV",
-            ha="center", color="#e67e22", fontsize=9.5)
-
-    ax.axvline(0, color="#aaa", lw=0.8, ls=":")
-    ax.set_xlabel(r"energy transfer $\hbar\omega$ (meV)", fontsize=12)
-    ax.set_ylabel(r"$S(Q,\omega)$ normalised", fontsize=12)
-    ax.set_title(
-        rf"spectrum at $Q\approx{q_target:.2f}$ Å$^{{-1}}$  |  {d_inc['name']}",
-        fontsize=11,
-    )
-    ax.legend(fontsize=9.5)
-    ax.set_xlim(-ewin, ewin)
-    ax.set_ylim(-0.05, 1.20)
-    ax.grid(True, alpha=0.18)
-    _despine(ax)
-    plt.tight_layout()
-
-    if save_path:
-        fig.savefig(save_path, bbox_inches="tight", dpi=150)
-        print(f"  figure saved → {save_path}")
-
-    return fig, ax
+    g = d["good"]
+    qg = d["q"][g]
+    e = d["e"]
+    em = (e >= -ewin) & (e <= ewin)
+    img = d["data"][np.ix_(g, em)]
+    img = np.where(np.isfinite(img) & (img > 0), img, np.nan)
+    qs = np.argsort(qg)
+    ism = gaussian_filter(np.where(np.isfinite(img[qs]), img[qs], 0.0),
+                          sigma=[1.5, 0.8])
+    ism[ism <= 0] = np.nan
+    vmin = max(np.nanpercentile(ism, 2), 1e-8)
+    vmax = np.nanpercentile(ism, 99)
 
 
-# ── S(Q, ω) colour maps ───────────────────────────────────────────────────────
 
-def plot_sqw_maps(
-    d_inc: dict,
-    d_coh: dict | None = None,
-    ewin: float = 1.2,
-    save_path: str | None = None,
-):
-    """
-    Plot side-by-side S(Q, ω) colour maps for INC and (optionally) COH data.
-
-    Uses a logarithmic colour scale because the elastic peak at ω = 0 is
-    typically 100× taller than the quasi-elastic wings.  Light Gaussian
-    smoothing (sigma=[1.5, 0.8]) is applied purely for visual clarity —
-    the fit data is never smoothed.
-
-    Parameters
-    ----------
-    d_inc : dict
-        Incoherent dataset dict.
-    d_coh : dict or None
-        Coherent dataset dict.  If None, the left panel shows INC as well.
-    ewin : float
-        Half-width of the energy window displayed (meV).
-    save_path : str or None
-
-    Returns
-    -------
-    fig, axes : matplotlib Figure and Axes.
-    """
-    left_data  = d_coh if d_coh is not None else d_inc
-    left_label = (
-        f"COH {left_data.get('temp', '?')} K" if d_coh else "INC (no COH)"
-    )
-
-    fig, axes = plt.subplots(1, 2, figsize=(14, 7))
+    fig, ax = plt.subplots(figsize=(8, 6))
     fig.patch.set_facecolor("#0d1117")
-
-    panels = [
-        (left_data, left_label),
-        (d_inc,     f"INC {d_inc.get('temp', '?')} K"),
-    ]
-
-    for ax, (d, title) in zip(axes, panels):
-        g     = d["good"]
-        qg    = d["q"][g]
-        e     = d["e"]
-        emask = (e >= -ewin) & (e <= ewin)
-
-        # Select good detectors and energy window, sort by Q for pcolormesh
-        img = d["data"][np.ix_(g, emask)]
-        img = np.where(np.isfinite(img) & (img > 0), img, np.nan)
-        qs  = np.argsort(qg)   # sort indices by Q
-
-        # Light smoothing along Q and ω axes — cosmetic only
-        ism         = gaussian_filter(
-            np.where(np.isfinite(img[qs]), img[qs], 0.0),
-            sigma=[1.5, 0.8],
-        )
-        ism[ism <= 0] = np.nan
-
-        # Log-normalised colourmap clipped to 2nd–99th percentile
-        vmin = max(np.nanpercentile(ism, 2), 1e-8)
-        vmax = np.nanpercentile(ism, 99)
-
-        im = ax.pcolormesh(
-            e[emask], qg[qs], ism,
-            cmap=_SQW_CMAP, norm=LogNorm(vmin=vmin, vmax=vmax),
-            shading="auto", rasterized=True,
-        )
-
-        ax.axvline(0, color="white", lw=1.0, ls="--", alpha=0.4)
-        ax.set_xlabel("ω (meV)",  color="white", fontsize=12)
-        ax.set_ylabel("Q (Å⁻¹)", color="white", fontsize=12)
-        ax.set_title(title, color="white", fontsize=11, pad=10)
-        ax.tick_params(colors="white")
-        ax.set_facecolor("#0d1117")
-
-        for sp in ax.spines.values():
-            sp.set_edgecolor("#555")
-
-        cb = fig.colorbar(im, ax=ax, pad=0.02, fraction=0.035)
-        cb.set_label("S(Q,ω)", color="white", fontsize=10)
-        cb.ax.yaxis.set_tick_params(color="white")
-        plt.setp(cb.ax.yaxis.get_ticklabels(), color="white")
-
-    fig.suptitle("S(Q,ω)", color="white", fontsize=12, y=1.01)
-    plt.tight_layout()
-
+    im = ax.pcolormesh(e[em], qg[qs], ism, cmap=_SQW_CMAP,
+                       norm=LogNorm(vmin=vmin, vmax=vmax),
+                       shading="auto", rasterized=True)
+    ax.axvline(0, color="white", lw=1, ls="--", alpha=0.4)
+    ax.set_xlabel("ω (meV)", color="white", fontsize=12)
+    ax.set_ylabel("Q (Å⁻¹)", color="white", fontsize=12)
+    ax.set_title(f"S(Q,ω)  —  {d.get('name','?')}",
+                 color="white", fontsize=11)
+    ax.tick_params(colors="white")
+    ax.set_facecolor("#0d1117")
+    for sp in ax.spines.values():
+        sp.set_edgecolor("#555")
+    cb = fig.colorbar(im, ax=ax, pad=0.02, fraction=0.035)
+    cb.set_label("S(Q,ω)", color="white")
+    cb.ax.yaxis.set_tick_params(color="white")
+    plt.setp(cb.ax.yaxis.get_ticklabels(), color="white")
+    fig.tight_layout()
     if save_path:
-        fig.savefig(save_path, bbox_inches="tight", facecolor="#0d1117", dpi=150)
-        print(f"  figure saved → {save_path}")
-
-    return fig, axes
-
-
-# ── Γ(Q) dispersion with MCMC fan ────────────────────────────────────────────
-
-def plot_hwhm(
-    q_hwhm, g_hwhm, g_err, samples,
-    d_map: float, l_map: float, d_inc: dict,
-    q_plot_min: float = 0.3, q_plot_max: float = 2.5,
-    save_path: str | None = None,
-):
-    """
-    Plot Γ(Q) vs Q² with the MAP CE fit and the MCMC posterior fan.
-
-    Plotting against Q² rather than Q is deliberate: in the Fickian limit
-    Γ = ħDQ² is a straight line in Q², so the saturation (curve bending
-    over) at high Q is immediately visible as deviation from linearity.
-
-    Overlay elements:
-    - Fan of CE curves from up to 400 random MCMC samples (shows uncertainty)
-    - 95% credible band (filled)
-    - MAP CE curve (solid red)
-    - Fickian limit (dashed grey) — for comparison
-    - Data points with ±2σ error bars
-    - Resolution HWHM reference line
-
-    Parameters
-    ----------
-    q_hwhm, g_hwhm, g_err : ndarray
-        Q centres, HWHM values, and errors from ``extract_hwhm``.
-    samples : ndarray, shape (N, 2)
-        MCMC posterior samples (D, l).
-    d_map, l_map : float
-        MAP parameters.
-    d_inc : dict
-        Used to retrieve fwhm_res for the resolution reference line.
-    q_plot_min, q_plot_max : float
-        Q range for the smooth model curves.
-    save_path : str or None
-
-    Returns
-    -------
-    fig, ax : matplotlib Figure and Axes.
-    """
-    d_s, l_s = samples[:, 0], np.abs(samples[:, 1])
-    q_fine   = np.linspace(q_plot_min, q_plot_max, 400)
-    q2_fine  = q_fine**2
-
-    fig, ax = plt.subplots(figsize=(9.5, 6.5))
-
-    # ── MCMC posterior fan ─────────────────────────────────────────────────
-    # Compute CE for every posterior sample, then plot a random subset
-    g_fan = ce(q_fine[None, :], d_s[:, None], l_s[:, None]) * 1000  # µeV
-    rng   = np.random.default_rng(0)
-    idx_f = rng.choice(len(d_s), min(400, len(d_s)), replace=False)
-    for i in idx_f:
-        ax.plot(q2_fine, g_fan[i], color="#2471a3", alpha=0.015, lw=0.8)
-
-    # 95% credible band
-    ax.fill_between(
-        q2_fine,
-        np.percentile(g_fan, 2.5,  axis=0),
-        np.percentile(g_fan, 97.5, axis=0),
-        alpha=0.25, color="#2471a3",
-        label=f"95% posterior (n={len(d_s)})",
-    )
-
-    # ── MAP CE curve ───────────────────────────────────────────────────────
-    ax.plot(
-        q2_fine, ce(q_fine, d_map, l_map) * 1000,
-        "-", color="#c0392b", lw=3.0,
-        label=rf"CE MAP $D={d_map:.4f}$ Å²/ps $\ell={l_map:.4f}$ Å",
-    )
-
-    # ── Fickian limit (low-Q) ──────────────────────────────────────────────
-    ax.plot(
-        q2_fine, fickian(q_fine, d_map) * 1000,
-        "--", color="#555", lw=1.8,
-        label=rf"Fickian $D={d_map:.4f}$ (low‑Q limit)",
-    )
-
-    # ── Data points with ±2σ error bars ───────────────────────────────────
-    ax.errorbar(
-        q_hwhm**2, g_hwhm * 1000, yerr=2 * g_err * 1000,
-        fmt="o", color="#111", ms=7,
-        capsize=4, elinewidth=1.8, label="data ±2σ",
-    )
-
-    # ── Resolution reference ───────────────────────────────────────────────
-    # The resolution HWHM is the minimum measurable linewidth
-    res_hwhm_uev = d_inc["fwhm_res"] / 2 * 1000  # µeV
-    ax.axhline(
-        res_hwhm_uev, color="#888", ls=":", lw=1.5,
-        label=f"resolution HWHM = {res_hwhm_uev:.0f} µeV",
-    )
-    ax.axhspan(0, res_hwhm_uev * 1.1, alpha=0.04, color="#888")
-
-    ax.set_xlabel(r"$Q^2$ (Å$^{-2}$)", fontsize=13)
-    ax.set_ylabel(r"$\Gamma(Q)$ (µeV)", fontsize=13)
-    ax.set_title(
-        "peak width vs $Q^2$ — deviation from linearity = jump diffusion",
-        fontsize=11,
-    )
-    ax.legend(fontsize=9)
-    ax.set_xlim(-0.05, q2_fine[-1] + 0.1)
-    ax.set_ylim(bottom=-10)
-    ax.grid(True, alpha=0.20)
-    _despine(ax)
-    plt.tight_layout()
-
-    if save_path:
-        fig.savefig(save_path, bbox_inches="tight", dpi=150)
-        print(f"  figure saved → {save_path}")
-
+        fig.savefig(save_path, bbox_inches="tight",
+                    facecolor="#0d1117", dpi=150)
     return fig, ax
 
 
-# ── Marginal posteriors ───────────────────────────────────────────────────────
 
-def plot_posteriors(
-    samples, d_map: float, l_map: float, d_inc: dict,
-    ref_values: dict | None = None,
-    save_path: str | None = None,
+
+# per-Q-bin model-vs-data panel
+def plot_per_q_fits(
+    data_bins, sigma_res, params,
+    model: str = "anisotropic_rotor",
+    save_path: str | None = None, **extras,
 ):
     """
-    Plot marginal posterior histograms for D, l, and τ = l²/(6D).
-
-    τ is propagated through the full posterior — every sample (D_i, l_i)
-    gives τ_i = l_i²/(6D_i).  No Gaussian approximation or delta method is
-    needed; the D-l correlation is automatically included.
-
-    The 95% credible interval is shown as a shaded band, with MAP and median
-    marked separately.  Optional reference values (e.g. literature D) can
-    be added via ``ref_values``.
-
-    Parameters
-    ----------
-    samples : ndarray, shape (N, 2)
-        MCMC posterior samples.
-    d_map, l_map : float
-        MAP values for vertical reference lines.
-    d_inc : dict
-        Used to retrieve fwhm_res and res_source for the figure title.
-    ref_values : dict or None
-        Optional literature / reference values for overlay.
-        Format: {"D": [(value, label), ...], "l": [...], "tau": [...]}
-    save_path : str or None
-
-    Returns
-    -------
-    fig, axes : matplotlib Figure and Axes.
+    Grid of subplots, one per Q-bin, showing data vs forward-model fit.
+    
     """
-    d_s    = samples[:, 0]
-    l_s    = np.abs(samples[:, 1])
-    tau_s  = l_s**2 / (6 * d_s)       # derived; propagates D-l correlation
-    tau_map = l_map**2 / (6 * d_map)
-
-    # 95% credible intervals
-    d_lo,   d_hi   = np.percentile(d_s,   [2.5, 97.5])
-    l_lo,   l_hi   = np.percentile(l_s,   [2.5, 97.5])
-    tau_lo, tau_hi = np.percentile(tau_s,  [2.5, 97.5])
-
-    if ref_values is None:
-        ref_values = {}
-
-    # Detect which sampler was used (for figure title)
-    try:
-        import emcee
-        sampler_label = "emcee"
-    except ImportError:
-        sampler_label = "MH fallback"
-
-    # Parameter list: (samples, MAP, lo, hi, x-label, colour, reference list)
-    params = [
-        (d_s,   d_map,   d_lo,   d_hi,   "D (Å²/ps)", "#c0392b", ref_values.get("D",   [])),
-        (l_s,   l_map,   l_lo,   l_hi,   "ℓ (Å)",      "#1e8449", ref_values.get("l",   [])),
-        (tau_s, tau_map, tau_lo, tau_hi, "τ (ps)",      "#e67e22", ref_values.get("tau", [])),
-    ]
-
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5.5))
-    fig.suptitle(
-        f"Bayesian posteriors | CE model | {len(d_s)} samples ({sampler_label})\n"
-        f"res FWHM = {d_inc['fwhm_res']*1000:.0f} µeV [{d_inc['res_source']}]",
-        fontsize=11,
-    )
-
-    for ax, (arr, map_val, lo, hi, xlabel, col, refs) in zip(axes, params):
-        med       = float(np.median(arr))
-        cnt, _, _ = ax.hist(arr, bins=80, density=True,
-                            color=col, alpha=0.80, edgecolor="white", lw=0.25)
-        pk = cnt.max()
-
-        # 95% credible interval shading
-        ax.axvspan(lo, hi, alpha=0.18, color=col)
-
-        # Median and MAP lines
-        ax.axvline(med,     color="#111", lw=2.5, label=f"median = {med:.4f}")
-        ax.axvline(map_val, color=col,   lw=1.8, ls="--",
-                   label=f"MAP = {map_val:.4f}")
-
-        # Optional literature reference lines
-        for ref_val, ref_label in refs:
-            ax.axvline(ref_val, color="#1565c0", lw=1.8, ls=":",
-                       label=f"{ref_label} = {ref_val}")
-
-        # Double-headed annotation arrow showing 95% CI width
-        ax.annotate("", xy=(hi, pk * 1.10), xytext=(lo, pk * 1.10),
-                    arrowprops=dict(arrowstyle="<->", color=col, lw=2.0))
-        ax.text(
-            (lo + hi) / 2, pk * 1.17,
-            f"95% CI [{lo:.4f}, {hi:.4f}]",
-            ha="center", fontsize=8.5, color=col, fontweight="bold",
-        )
-
-        ax.set_xlabel(xlabel, fontsize=13)
-        ax.set_ylabel("density", fontsize=11)
-        ax.set_title(xlabel, fontsize=12, color=col, fontweight="bold")
-        ax.legend(fontsize=8, framealpha=0.92)
-        ax.set_ylim(0, pk * 1.32)
-        ax.grid(True, alpha=0.20)
-        _despine(ax)
-
-    plt.tight_layout()
-
-    if save_path:
-        fig.savefig(save_path, bbox_inches="tight", dpi=150)
-        print(f"  figure saved → {save_path}")
-
+    from .fitting import _resolve_kernel_for_bin
+    fm = get_model(model)
+    n = len(data_bins)
+    ncols = 4
+    nrows = (n + ncols - 1) // ncols
+    fig, axes = plt.subplots(nrows, ncols,
+                             figsize=(3.4 * ncols, 2.8 * nrows),
+                             squeeze=False)
+    axes = axes.flatten()
+    for ax, k, (omega, spec, errs, q) in zip(axes, range(n), data_bins):
+        sr_k = _resolve_kernel_for_bin(sigma_res, k)
+        shape = fm.predict(omega, q, params, sr_k, **{**fm.extras, **extras})
+        basis = np.column_stack([shape, np.ones_like(shape)])
+        amp, _ = nnls(basis / errs[:, None], spec / errs)
+        fit = amp[0] * shape + amp[1]
+        chi2r = np.sum(((spec - fit) / errs) ** 2) / max(len(spec) - 2, 1)
+        ax.errorbar(omega, spec, yerr=errs, fmt=".", color="#222",
+                    ms=2.5, elinewidth=0.5, alpha=0.6)
+        ax.plot(omega, fit, "-", color="#c0392b", lw=1.6,
+                label=f"χ²ᵣ={chi2r:.2f}")
+        ax.axhline(amp[1], color="#7f8c8d", lw=0.6, ls=":", alpha=0.6)
+        ax.set_title(f"Q = {q:.2f} Å⁻¹", fontsize=8)
+        ax.legend(fontsize=7, loc="upper right")
+        ax.tick_params(labelsize=7)
+    for ax in axes[n:]:
+        ax.axis("off")
+    pretty = ", ".join(f"{n}={v:.3f}"
+                       for n, v in zip(fm.param_names, params))
+    fig.suptitle(f"forward-model fit per Q-bin   model={model}   {pretty}",
+                 fontsize=10)
+    fig.tight_layout()
+    _save(fig, save_path)
     return fig, axes
 
 
-# ── Joint posterior ───────────────────────────────────────────────────────────
 
-def plot_joint_posterior(
-    samples,
-    d_map: float,
-    l_map: float,
+
+# Γ(Q) vs Q^2 (legacy approach)
+def plot_hwhm_vs_q2(
+    q_centres, hwhm, hwhm_err,
+    model_results: dict | None = None,
+    samples: np.ndarray | None = None,
+    map_params: tuple | None = None,
+    res_hwhm_uev: float = 50,
     save_path: str | None = None,
 ):
     """
-    Plot the joint (D, l) posterior as a scatter plot with KDE contours.
+    Γ(Q) vs Q^2 with optional model curves and posterior fan.
+    
+    """
 
-    An elongated contour along the diagonal (large D correlated with large l)
-    means the data pins down τ = l²/(6D) tightly but leaves D and l with
-    individual uncertainty.  This is the expected behaviour because the
-    spectrum is primarily sensitive to the energy scale Γ ≈ ħ/τ rather than
-    to D and l separately.
 
-    KDE contours are drawn at 68% and 95% probability mass.
+    q_fine = np.linspace(max(q_centres.min() * 0.85, 0.05),
+                         q_centres.max() * 1.10, 350)
+    q2f = q_fine ** 2
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+
+
+
+    if samples is not None and map_params is not None and len(map_params) >= 2:
+        # CE posterior fan, only meaningful for CE-shaped models
+        d_s, l_s = samples[:, 0], np.abs(samples[:, 1])
+        rng = np.random.default_rng(0)
+        idx = rng.choice(len(d_s), min(300, len(d_s)), replace=False)
+        try:
+            fan = np.array([ce_hwhm(q_fine, d_s[i], l_s[i]) * 1000 for i in idx])
+            ax.fill_between(q2f, np.percentile(fan, 2.5, axis=0),
+                            np.percentile(fan, 97.5, axis=0),
+                            alpha=0.18, color="#2471a3",
+                            label=f"95% posterior  n={len(d_s)}")
+        except Exception:
+            pass
+
+    if model_results:
+        for name, res in model_results.items():
+            if "error" in res:
+                continue
+            D = res.get("D", 0.30)
+            try:
+                if name == "ce":
+                    L = res.get("l", 2.5)
+                    y = ce_hwhm(q_fine, D, L) * 1000
+                    label = (rf"CE  $D={D:.4f}$  $\ell={L:.3f}$")
+                elif name == "fickian":
+                    y = fickian_hwhm(q_fine, D) * 1000
+                    label = rf"Fickian  $D={D:.4f}$"
+                elif name == "ss":
+                    ts = res.get("tau_s", 1.0)
+                    y = ss_hwhm(q_fine, D, ts) * 1000
+                    label = rf"SS  $D={D:.4f}$  $\tau_s={ts:.3f}$"
+                else:
+                    continue
+                ax.plot(q2f, y, "-", lw=2.0, label=label)
+            except Exception:
+                continue
+
+
+
+    ax.errorbar(q_centres ** 2, hwhm * 1000, yerr=2 * hwhm_err * 1000,
+                fmt="o", color="#111", ms=6, capsize=3.5, elinewidth=1.4,
+                label=r"data  $\pm 2\sigma$")
+    ax.axhline(res_hwhm_uev, color="#888", ls=":", lw=1.3,
+               label=rf"resolution HWHM = {res_hwhm_uev:.0f} µeV")
+    ax.axhspan(0, res_hwhm_uev * 1.1, alpha=0.04, color="#888")
+    ax.set_xlabel(r"$Q^2$  (Å$^{-2}$)", fontsize=12)
+    ax.set_ylabel(r"$\Gamma(Q)$  (µeV)", fontsize=12)
+    ax.set_title(r"$\Gamma(Q)$ vs $Q^2$  —  deviation from linearity is "
+                 "non-Fickian", fontsize=10)
+    ax.legend(fontsize=9, loc="upper left")
+    ax.set_xlim(left=-0.05)
+    ax.set_ylim(bottom=-10)
+    ax.grid(alpha=0.18)
+    _despine(ax)
+    fig.tight_layout()
+    _save(fig, save_path)
+    return fig, ax
+
+
+# 1D marginal posteriors
+def plot_posteriors(
+    samples: np.ndarray,
+    model: str = "anisotropic_rotor",
+    reference_values: dict | None = None,
+    derived: dict | None = None,
+    save_path: str | None = None,
+):
+    """
+    Histograms with median, 95% CI band and reference lines.
 
     Parameters
     ----------
-    samples : ndarray, shape (N, 2)
-        MCMC posterior samples.
-    d_map, l_map : float
-        MAP values for crosshair reference lines.
-    save_path : str or None
+    samples : ndarray, shape (n, n_params)
 
-    Returns
-    -------
-    fig, ax : matplotlib Figure and Axes.
+    model : str
+        Registered model name (provides parameter names).
+
+    reference_values : dict, optional
+        ''{param_name: [(value, label), ...]}'' to plot vertical reference
+        lines (e.g. literature values).
+
+    derived : dict, optional
+        ''{label: callable(samples)->array}'' for extra panels.
+
     """
-    d_s = samples[:, 0]
-    l_s = np.abs(samples[:, 1])
+
+
+    fm = get_model(model)
+    panels: list[tuple[str, np.ndarray]] = [
+        (n, samples[:, i]) for i, n in enumerate(fm.param_names)
+    ]
+    if derived:
+        for name, fn in derived.items():
+            panels.append((name, np.asarray(fn(samples))))
+
+
+    n = len(panels)
+    cols = min(4, n)
+    rows = (n + cols - 1) // cols
+    fig, axes = plt.subplots(rows, cols, figsize=(4.0 * cols, 3.5 * rows),
+                             squeeze=False)
+    axes = axes.flatten()
+
+
+
+    palette = ["#c0392b", "#7f8c8d", "#1e8449", "#2471a3",
+               "#8e44ad", "#e67e22", "#16a085", "#d35400"]
+
+
+
+    for ax, (name, arr), col in zip(axes, panels,
+                                    palette * (1 + n // len(palette))):
+        med = float(np.median(arr))
+        lo, hi = np.percentile(arr, [2.5, 97.5])
+        cnt, _, _ = ax.hist(arr, bins=60, density=True,
+                            color=col, alpha=0.78,
+                            edgecolor="white", lw=0.3)
+        pk = cnt.max()
+        ax.axvspan(lo, hi, alpha=0.16, color=col)
+        ax.axvline(med, color="black", lw=1.8,
+                   label=f"median = {med:.4f}")
+        if reference_values and name in reference_values:
+            for val, lab in reference_values[name]:
+                ax.axvline(val, color="#1565c0", lw=1.7, ls=":",
+                           label=f"{lab} = {val}")
+        ax.set_xlabel(name, fontsize=10)
+        ax.set_ylabel("density", fontsize=9)
+        ax.set_title(name, fontsize=10, color=col, fontweight="bold")
+        ax.legend(fontsize=7.5)
+        ax.set_ylim(0, pk * 1.25)
+        ax.grid(alpha=0.18)
+        _despine(ax)
+    for ax in axes[n:]:
+        ax.axis("off")
+    fig.suptitle(f"posteriors — {model} ({len(samples)} samples)",
+                 fontsize=11)
+    fig.tight_layout()
+    _save(fig, save_path)
+    return fig, axes
+
+
+# joint posterior for a pair of parameters
+def plot_joint_posterior(
+    samples: np.ndarray,
+    indices: tuple[int, int] = (0, 1),
+    labels: tuple[str, str] = ("p₁", "p₂"),
+    map_point: tuple[float, float] | None = None,
+    reference_point: tuple[float, float] | None = None,
+    save_path: str | None = None,
+):
+    """
+    Scatter+contour for any two parameter columns of ''samples''.
+    
+    """
+
+
+    i, j = indices
+    x = samples[:, i]
+    y = samples[:, j]
+
 
     fig, ax = plt.subplots(figsize=(7, 6))
+    n_plot = min(len(x), 3000)
+    idx = np.random.default_rng(0).choice(len(x), n_plot, replace=False)
+    ax.scatter(x[idx], y[idx], c="#2471a3", alpha=0.10, s=4, rasterized=True)
 
-    # Scatter a random subset to avoid overplotting
-    n_plot = min(len(d_s), 3000)
-    idx    = np.random.default_rng(0).choice(len(d_s), n_plot, replace=False)
-    ax.scatter(d_s[idx], l_s[idx], c="#2471a3", alpha=0.12, s=4, rasterized=True)
 
-    # MAP crosshair
-    ax.axvline(d_map, color="#c0392b", lw=1.8, ls="--",
-               label=f"D MAP = {d_map:.4f}")
-    ax.axhline(l_map, color="#1e8449", lw=1.8, ls="--",
-               label=f"l MAP = {l_map:.4f}")
-
-    # ── KDE contours at 68% and 95% ───────────────────────────────────────
+    if map_point is not None:
+        ax.scatter([map_point[0]], [map_point[1]],
+                   color="#f1c40f", marker="o", s=120, edgecolor="black",
+                   lw=1.0, zorder=5,
+                   label=f"MAP ({map_point[0]:.3f}, {map_point[1]:.3f})")
+    if reference_point is not None:
+        ax.scatter([reference_point[0]], [reference_point[1]],
+                   color="#c0392b", marker="*", s=240, edgecolor="black",
+                   lw=1.0, zorder=5,
+                   label=f"reference "
+                         f"({reference_point[0]:.3f}, {reference_point[1]:.3f})")
     try:
         from scipy.stats import gaussian_kde
-
-        xy  = np.vstack([d_s, l_s])
+        xy = np.vstack([x, y])
         kde = gaussian_kde(xy)
-
-        # Evaluate KDE on a grid
-        d_g = np.linspace(d_s.min(), d_s.max(), 100)
-        l_g = np.linspace(l_s.min(), l_s.max(), 100)
-        D, L = np.meshgrid(d_g, l_g)
-        Z    = kde(np.vstack([D.ravel(), L.ravel()])).reshape(D.shape)
-
-        # Find density levels enclosing 68% and 95% of the probability mass
-        z_flat = np.sort(Z.ravel())[::-1]
-        cdf    = np.cumsum(z_flat) / z_flat.sum()
-        lvl68  = z_flat[np.searchsorted(cdf, 0.68)]
-        lvl95  = z_flat[np.searchsorted(cdf, 0.95)]
-
-        ax.contour(D, L, Z, levels=[lvl95, lvl68],
-                   colors=["#2471a3", "#c0392b"],
-                   linewidths=[1.2, 2.0])
+        xg = np.linspace(x.min(), x.max(), 100)
+        yg = np.linspace(y.min(), y.max(), 100)
+        X, Y = np.meshgrid(xg, yg)
+        Z = kde(np.vstack([X.ravel(), Y.ravel()])).reshape(X.shape)
+        zf = np.sort(Z.ravel())[::-1]
+        cdf = np.cumsum(zf) / zf.sum()
+        l68 = zf[np.searchsorted(cdf, 0.68)]
+        l95 = zf[np.searchsorted(cdf, 0.95)]
+        ax.contour(X, Y, Z, levels=[l95, l68],
+                   colors=["#2471a3", "#c0392b"], linewidths=[1.2, 2.0])
     except Exception:
-        pass  # KDE can fail if samples are too few or degenerate
+        pass
 
-    ax.set_xlabel(r"$D$ (Å²/ps)", fontsize=13)
-    ax.set_ylabel(r"$\ell$ (Å)",   fontsize=13)
-    ax.set_title("Joint posterior (D, l)", fontsize=12)
+    ax.set_xlabel(labels[0], fontsize=12)
+    ax.set_ylabel(labels[1], fontsize=12)
+    ax.set_title(f"joint posterior  ({labels[0]}, {labels[1]})", fontsize=11)
     ax.legend(fontsize=9)
-    ax.grid(True, alpha=0.20)
+    ax.grid(alpha=0.18)
     _despine(ax)
-    plt.tight_layout()
-
-    if save_path:
-        fig.savefig(save_path, bbox_inches="tight", dpi=150)
-        print(f"  figure saved → {save_path}")
-
+    fig.tight_layout()
+    _save(fig, save_path)
     return fig, ax

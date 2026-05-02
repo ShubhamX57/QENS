@@ -1,0 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap');
+.sidebar-brand-text { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
+pre, code, kbd { font-family: 'IBM Plex Mono', monospace !important; font-size: 0.85em; }
+h1, h2, h3 { letter-spacing: -0.02em; }
+.sd-card { border-radius: 8px !important; }

@@ -23,12 +23,12 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
     "sphinx_design",
-    "myst_parser",
+    "myst_parser"
 ]
 
 autodoc_default_options = {
     "members": True, "undoc-members": False,
-    "show-inheritance": True, "member-order": "bysource",
+    "show-inheritance": True, "member-order": "bysource"
 }
 autodoc_typehints        = "description"
 autosummary_generate     = True
@@ -39,12 +39,12 @@ napoleon_use_rtype       = False
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy":  ("https://numpy.org/doc/stable", None),
-    "scipy":  ("https://docs.scipy.org/doc/scipy", None),
+    "scipy":  ("https://docs.scipy.org/doc/scipy", None)
 }
 
 myst_enable_extensions = [
     "colon_fence", "deflist", "dollarmath",
-    "fieldlist", "html_image", "tasklist",
+    "fieldlist", "html_image", "tasklist"
 ]
 myst_dmath_double_inline = True
 
@@ -61,7 +61,7 @@ html_theme_options = {
         "color-brand-primary":   "#0a7abf",
         "color-brand-content":   "#0a7abf",
         "font-stack":            "'DM Sans', -apple-system, sans-serif",
-        "font-stack--monospace": "'IBM Plex Mono', monospace",
+        "font-stack--monospace": "'IBM Plex Mono', monospace"
     },
     "dark_css_variables": {
         "color-brand-primary":        "#38bdf8",
@@ -69,13 +69,13 @@ html_theme_options = {
         "color-background-primary":   "#0b0f1a",
         "color-background-secondary": "#111827",
         "font-stack":                 "'DM Sans', -apple-system, sans-serif",
-        "font-stack--monospace":      "'IBM Plex Mono', monospace",
+        "font-stack--monospace":      "'IBM Plex Mono', monospace"
     },
     "navigation_with_keys": True,
     "top_of_page_button":   "edit",
     "source_repository":    "https://github.com/ShubhamX57/QENS/",
     "source_branch":        "main",
-    "source_directory":     "docs/",
+    "source_directory":     "docs/"
 }
 
 html_static_path    = ["_static"]

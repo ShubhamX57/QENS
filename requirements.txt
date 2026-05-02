@@ -1,9 +1,13 @@
-sphinx
-sphinx-rtd-theme
-myst-parser
-numpy
-scipy
-h5py
-matplotlib
-emcee
-python-docs-theme
+# runtime
+numpy>=1.24
+scipy>=1.10
+matplotlib>=3.7
+h5py>=3.7
+emcee>=3.1
+# docs
+sphinx>=7.2
+furo>=2024.1.29
+sphinx-copybutton>=0.5
+sphinx-autodoc-typehints>=1.25
+myst-parser>=2.0
+sphinx-design>=0.5

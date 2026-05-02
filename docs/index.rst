@@ -10,10 +10,6 @@ qens — Quasi-Elastic Neutron Scattering Analysis
    :alt: v2.0.0
 .. image:: https://img.shields.io/badge/license-MIT-green?style=flat-square
    :alt: MIT
-.. image:: https://readthedocs.org/projects/qens/badge/?version=latest&style=flat-square
-   :target: https://qens.readthedocs.io
-   :alt: Docs
-
 |
 
 End-to-end Python library for analysing **Quasi-Elastic Neutron Scattering**

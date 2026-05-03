@@ -62,15 +62,13 @@
          <span class="qens-eco-desc">FFT · NNLS · fitting</span>
        </a>
 
-       <!-- Matplotlib: local light/dark SVGs (following Matplotlib's own pattern) -->
+       <!-- Matplotlib: inline SVG (no external file) -->
        <a href="https://matplotlib.org" class="qens-eco-card" title="Matplotlib">
          <div class="qens-eco-logo">
-           <img src="_static/matplotlib_logo_light.svg"
-                class="matplotlib-logo-light"
-                alt="Matplotlib logo" />
-           <img src="_static/matplotlib_logo_dark.svg"
-                class="matplotlib-logo-dark"
-                alt="Matplotlib logo" />
+           <svg viewBox="0 0 80 32" xmlns="http://www.w3.org/2000/svg" width="48" height="48">
+             <rect width="80" height="32" fill="#11557c" rx="4"/>
+             <text x="8" y="22" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="bold" fill="white">matplotlib</text>
+           </svg>
          </div>
          <span class="qens-eco-name">Matplotlib</span>
          <span class="qens-eco-ver">≥&nbsp;3.7</span>
@@ -112,11 +110,15 @@
          <span class="qens-eco-desc">Ensemble MCMC</span>
        </a>
 
-       <!-- Python: local PNG with light/dark background container -->
+       <!-- Python: inline SVG (official-like, no external file) -->
        <a href="https://www.python.org" class="qens-eco-card" title="Python">
-         <div class="qens-eco-logo python-logo-container">
-           <img src="_static/python_logo.png"
-                alt="Python logo" />
+         <div class="qens-eco-logo">
+           <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+             <path d="M24 2c-4.4 0-8 3.6-8 8v4h8v2h-8H8c-4.4 0-8 3.6-8 8v12c0 4.4 3.6 8 8 8h4v-4h-4c-2.2 0-4-1.8-4-4V24c0-2.2 1.8-4 4-4h16c2.2 0 4-1.8 4-4V10c0-4.4-3.6-8-8-8z" fill="#306998"/>
+             <path d="M32 6v4h4c2.2 0 4 1.8 4 4v12c0 2.2-1.8 4-4 4H20c-2.2 0-4 1.8-4 4v4c0 4.4 3.6 8 8 8s8-3.6 8-8v-4h-8v-2h8h12c4.4 0 8-3.6 8-8V10c0-4.4-3.6-8-8-8h-4z" fill="#FFD43B"/>
+             <circle cx="28" cy="36" r="2" fill="white"/>
+             <circle cx="20" cy="12" r="2" fill="white"/>
+           </svg>
          </div>
          <span class="qens-eco-name">Python</span>
          <span class="qens-eco-ver">≥&nbsp;3.10</span>
@@ -239,22 +241,10 @@
    .qens-eco-logo {
      width:52px; height:52px;
      display:flex; align-items:center; justify-content:center;
-     position: relative;
    }
    .qens-eco-logo img, .qens-eco-logo svg {
      width:48px; height:48px; object-fit:contain; display:block;
    }
-
-   /* Matplotlib light/dark switching */
-   .matplotlib-logo-dark { display: none; }
-   .matplotlib-logo-light { display: block; }
-   body[data-theme="dark"] .matplotlib-logo-light { display: none; }
-   body[data-theme="dark"] .matplotlib-logo-dark { display: block; }
-   @media (prefers-color-scheme: dark) {
-     body[data-theme="auto"] .matplotlib-logo-light { display: none; }
-     body[data-theme="auto"] .matplotlib-logo-dark { display: block; }
-   }
-
    /* icon-only cards: add subtle bg circle */
    .qens-eco-icon {
      border-radius:10px;
@@ -263,15 +253,10 @@
    body[data-theme="dark"] .qens-eco-icon,
    body[data-theme="auto"] .qens-eco-icon { background:rgba(255,255,255,.05); }
 
-   /* Python logo container - ensure visibility */
-   .python-logo-container {
-     background: white;
-     border-radius: 12px;
-     padding: 4px;
-   }
-   body[data-theme="dark"] .python-logo-container,
-   body[data-theme="auto"] .python-logo-container {
-     background: #1e1e2f;
+   /* Optional: Python SVG colors are fixed, but for dark mode they remain visible. */
+   /* Make sure the white circles don't disappear on light mode */
+   .qens-eco-logo svg circle[fill="white"] {
+     fill: white;
    }
 
    /* ─── Card text ─── */

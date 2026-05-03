@@ -62,12 +62,15 @@
          <span class="qens-eco-desc">FFT · NNLS · fitting</span>
        </a>
 
-       <!-- Matplotlib: local static file -->
+       <!-- Matplotlib: local light/dark SVGs (following Matplotlib's own pattern) -->
        <a href="https://matplotlib.org" class="qens-eco-card" title="Matplotlib">
          <div class="qens-eco-logo">
-           <img src="_static/matplotlib_logo.svg"
-                alt="Matplotlib logo"
-                class="matplotlib-logo" />
+           <img src="_static/matplotlib_logo_light.svg"
+                class="matplotlib-logo-light"
+                alt="Matplotlib logo" />
+           <img src="_static/matplotlib_logo_dark.svg"
+                class="matplotlib-logo-dark"
+                alt="Matplotlib logo" />
          </div>
          <span class="qens-eco-name">Matplotlib</span>
          <span class="qens-eco-ver">≥&nbsp;3.7</span>
@@ -76,7 +79,6 @@
 
        <a href="https://www.h5py.org" class="qens-eco-card" title="h5py">
          <div class="qens-eco-logo qens-eco-icon" style="--ic:#1a73c8">
-           <!-- h5py: chunked-storage icon — three stacked H5 file layers -->
            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
              <rect x="6"  y="28" width="36" height="10" rx="3" fill="var(--ic)" opacity=".4"/>
              <rect x="6"  y="17" width="36" height="10" rx="3" fill="var(--ic)" opacity=".65"/>
@@ -92,15 +94,12 @@
 
        <a href="https://emcee.readthedocs.io" class="qens-eco-card" title="emcee">
          <div class="qens-eco-logo qens-eco-icon" style="--ic:#7c3aed">
-           <!-- emcee: MCMC walker chain symbol -->
            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
              <rect width="48" height="48" rx="8" fill="var(--ic)" opacity=".12"/>
-             <!-- chain of walkers as winding path -->
              <polyline
                points="4,38 9,26 14,34 19,20 24,30 29,18 34,28 39,16 44,22"
                stroke="var(--ic)" stroke-width="2.4" fill="none"
                stroke-linecap="round" stroke-linejoin="round"/>
-             <!-- walker dots -->
              <circle cx="4"  cy="38" r="2.4" fill="var(--ic)"/>
              <circle cx="14" cy="34" r="2.4" fill="var(--ic)"/>
              <circle cx="24" cy="30" r="2.4" fill="var(--ic)"/>
@@ -113,7 +112,7 @@
          <span class="qens-eco-desc">Ensemble MCMC</span>
        </a>
 
-       <!-- Python: local static file -->
+       <!-- Python: local PNG with light/dark background container -->
        <a href="https://www.python.org" class="qens-eco-card" title="Python">
          <div class="qens-eco-logo python-logo-container">
            <img src="_static/python_logo.png"
@@ -240,10 +239,22 @@
    .qens-eco-logo {
      width:52px; height:52px;
      display:flex; align-items:center; justify-content:center;
+     position: relative;
    }
    .qens-eco-logo img, .qens-eco-logo svg {
      width:48px; height:48px; object-fit:contain; display:block;
    }
+
+   /* Matplotlib light/dark switching */
+   .matplotlib-logo-dark { display: none; }
+   .matplotlib-logo-light { display: block; }
+   body[data-theme="dark"] .matplotlib-logo-light { display: none; }
+   body[data-theme="dark"] .matplotlib-logo-dark { display: block; }
+   @media (prefers-color-scheme: dark) {
+     body[data-theme="auto"] .matplotlib-logo-light { display: none; }
+     body[data-theme="auto"] .matplotlib-logo-dark { display: block; }
+   }
+
    /* icon-only cards: add subtle bg circle */
    .qens-eco-icon {
      border-radius:10px;
@@ -251,12 +262,6 @@
    }
    body[data-theme="dark"] .qens-eco-icon,
    body[data-theme="auto"] .qens-eco-icon { background:rgba(255,255,255,.05); }
-
-   /* Fix Matplotlib logo for dark mode */
-   body[data-theme="dark"] .matplotlib-logo,
-   body[data-theme="auto"] .matplotlib-logo {
-     filter: invert(1);
-   }
 
    /* Python logo container - ensure visibility */
    .python-logo-container {
@@ -313,26 +318,26 @@
 .. grid:: 2
    :gutter: 2
 
-   .. grid-item-card:: 🚀 Getting Started
+   .. grid-item-card::  Getting Started
       :link: installation
       :link-type: doc
 
       Install the library and run the 60-second example.
 
-   .. grid-item-card:: ⚡ Quick Start
+   .. grid-item-card::  Quick Start
       :link: quickstart
       :link-type: doc
 
-      Full workflow: load → pre-process → fit → MCMC → plot.
+      Full workflow: load >> pre-process >> fit >> MCMC >> plot.
 
-   .. grid-item-card:: 🔬 Physical Models
+   .. grid-item-card::  Physical Models
       :link: models
       :link-type: doc
 
       Fickian, Chudley-Elliott, Singwi-Sjölander, isotropic rotor,
       anisotropic rotor, and the custom model registry.
 
-   .. grid-item-card:: 📖 API Reference
+   .. grid-item-card::  API Reference
       :link: api/index
       :link-type: doc
 

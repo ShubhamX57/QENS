@@ -62,9 +62,10 @@
          <span class="qens-eco-desc">FFT · NNLS · fitting</span>
        </a>
 
+       <!-- Matplotlib: local static file -->
        <a href="https://matplotlib.org" class="qens-eco-card" title="Matplotlib">
          <div class="qens-eco-logo">
-           <img src="https://matplotlib.org/_static/images/logo2.svg"
+           <img src="_static/matplotlib_logo.svg"
                 alt="Matplotlib logo"
                 class="matplotlib-logo" />
          </div>
@@ -112,9 +113,10 @@
          <span class="qens-eco-desc">Ensemble MCMC</span>
        </a>
 
+       <!-- Python: local static file -->
        <a href="https://www.python.org" class="qens-eco-card" title="Python">
          <div class="qens-eco-logo python-logo-container">
-           <img src="https://www.python.org/static/community_logos/python-logo-only.png"
+           <img src="_static/python_logo.png"
                 alt="Python logo" />
          </div>
          <span class="qens-eco-name">Python</span>
@@ -311,26 +313,26 @@
 .. grid:: 2
    :gutter: 2
 
-   .. grid-item-card::  Getting Started
+   .. grid-item-card:: 🚀 Getting Started
       :link: installation
       :link-type: doc
 
       Install the library and run the 60-second example.
 
-   .. grid-item-card::  Quick Start
+   .. grid-item-card:: ⚡ Quick Start
       :link: quickstart
       :link-type: doc
 
       Full workflow: load → pre-process → fit → MCMC → plot.
 
-   .. grid-item-card::  Physical Models
+   .. grid-item-card:: 🔬 Physical Models
       :link: models
       :link-type: doc
 
       Fickian, Chudley-Elliott, Singwi-Sjölander, isotropic rotor,
       anisotropic rotor, and the custom model registry.
 
-   .. grid-item-card::  API Reference
+   .. grid-item-card:: 📖 API Reference
       :link: api/index
       :link-type: doc
 

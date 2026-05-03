@@ -10,10 +10,22 @@
           alt="qens — Quasi-Elastic Neutron Scattering Analysis" />
 
      <div class="qens-badges">
-       <a href="https://www.python.org/"                               class="qens-badge qens-badge-blue" >Python 3.10+</a>
-       <a href="https://github.com/ShubhamX57/QENS/releases"          class="qens-badge qens-badge-green">v2.0.0</a>
-       <a href="https://github.com/ShubhamX57/QENS/blob/main/LICENSE" class="qens-badge qens-badge-gray" >MIT License</a>
-       <a href="https://qens.readthedocs.io"                          class="qens-badge qens-badge-teal" >Read the Docs</a>
+       <a href="https://www.python.org/">
+         <img src="https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square"
+              alt="Python 3.10+">
+       </a>
+       <a href="https://github.com/ShubhamX57/QENS/releases">
+         <img src="https://img.shields.io/badge/version-2.0.0-38bdf8?style=flat-square"
+              alt="v2.0.0">
+       </a>
+       <a href="https://github.com/ShubhamX57/QENS/blob/main/LICENSE">
+         <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square"
+              alt="MIT License">
+       </a>
+       <a href="https://qens.readthedocs.io">
+         <img src="https://img.shields.io/badge/docs-Read%20the%20Docs-teal?style=flat-square"
+              alt="Read the Docs">
+       </a>
      </div>
 
      <p class="qens-tagline">
@@ -53,7 +65,8 @@
        <a href="https://matplotlib.org" class="qens-eco-card" title="Matplotlib">
          <div class="qens-eco-logo">
            <img src="https://matplotlib.org/_static/images/logo2.svg"
-                alt="Matplotlib logo" />
+                alt="Matplotlib logo"
+                class="matplotlib-logo" />
          </div>
          <span class="qens-eco-name">Matplotlib</span>
          <span class="qens-eco-ver">≥&nbsp;3.7</span>
@@ -100,7 +113,7 @@
        </a>
 
        <a href="https://www.python.org" class="qens-eco-card" title="Python">
-         <div class="qens-eco-logo">
+         <div class="qens-eco-logo python-logo-container">
            <img src="https://www.python.org/static/community_logos/python-logo-only.png"
                 alt="Python logo" />
          </div>
@@ -138,27 +151,15 @@
      display:flex; flex-wrap:wrap; justify-content:center;
      gap:0.45rem; margin-bottom:1.4rem;
    }
-   .qens-badge {
-     font-family: var(--font-stack--monospace, monospace);
-     font-size:0.72rem; font-weight:500; letter-spacing:0.04em;
-     padding:0.28rem 0.75rem; border-radius:4px;
-     text-decoration:none; border:1px solid transparent;
+   .qens-badges a {
+     display:inline-block;
+     line-height:0;
      transition:opacity .15s;
    }
-   .qens-badge:hover { opacity:.78; text-decoration:none; }
-   .qens-badge-blue  { background:#dbeafe; color:#1e40af; border-color:#bfdbfe; }
-   .qens-badge-green { background:#dcfce7; color:#166534; border-color:#bbf7d0; }
-   .qens-badge-gray  { background:#f3f4f6; color:#374151; border-color:#d1d5db; }
-   .qens-badge-teal  { background:#ccfbf1; color:#0f766e; border-color:#99f6e4; }
-   body[data-theme="dark"] .qens-badge-blue  { background:#1e3a5f; color:#93c5fd; border-color:#2563eb; }
-   body[data-theme="dark"] .qens-badge-green { background:#14532d; color:#86efac; border-color:#16a34a; }
-   body[data-theme="dark"] .qens-badge-gray  { background:#1f2937; color:#d1d5db; border-color:#374151; }
-   body[data-theme="dark"] .qens-badge-teal  { background:#134e4a; color:#5eead4; border-color:#0d9488; }
-   @media (prefers-color-scheme:dark) {
-     body[data-theme="auto"] .qens-badge-blue  { background:#1e3a5f; color:#93c5fd; border-color:#2563eb; }
-     body[data-theme="auto"] .qens-badge-green { background:#14532d; color:#86efac; border-color:#16a34a; }
-     body[data-theme="auto"] .qens-badge-gray  { background:#1f2937; color:#d1d5db; border-color:#374151; }
-     body[data-theme="auto"] .qens-badge-teal  { background:#134e4a; color:#5eead4; border-color:#0d9488; }
+   .qens-badges a:hover { opacity:.78; text-decoration:none; }
+   .qens-badges img {
+     border:0;
+     height:auto;
    }
 
    /* ─── Tagline ─── */
@@ -249,6 +250,23 @@
    body[data-theme="dark"] .qens-eco-icon,
    body[data-theme="auto"] .qens-eco-icon { background:rgba(255,255,255,.05); }
 
+   /* Fix Matplotlib logo for dark mode */
+   body[data-theme="dark"] .matplotlib-logo,
+   body[data-theme="auto"] .matplotlib-logo {
+     filter: invert(1);
+   }
+
+   /* Python logo container - ensure visibility */
+   .python-logo-container {
+     background: white;
+     border-radius: 12px;
+     padding: 4px;
+   }
+   body[data-theme="dark"] .python-logo-container,
+   body[data-theme="auto"] .python-logo-container {
+     background: #1e1e2f;
+   }
+
    /* ─── Card text ─── */
    .qens-eco-name {
      font-family:var(--font-stack--monospace,monospace);
@@ -293,26 +311,26 @@
 .. grid:: 2
    :gutter: 2
 
-   .. grid-item-card:: 🚀 Getting Started
+   .. grid-item-card::  Getting Started
       :link: installation
       :link-type: doc
 
       Install the library and run the 60-second example.
 
-   .. grid-item-card:: ⚡ Quick Start
+   .. grid-item-card::  Quick Start
       :link: quickstart
       :link-type: doc
 
       Full workflow: load → pre-process → fit → MCMC → plot.
 
-   .. grid-item-card:: 🔬 Physical Models
+   .. grid-item-card::  Physical Models
       :link: models
       :link-type: doc
 
       Fickian, Chudley-Elliott, Singwi-Sjölander, isotropic rotor,
       anisotropic rotor, and the custom model registry.
 
-   .. grid-item-card:: 📖 API Reference
+   .. grid-item-card::  API Reference
       :link: api/index
       :link-type: doc
 

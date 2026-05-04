@@ -2,9 +2,9 @@
 Configuration dataclass - runtime parameters for the QENS analysis pipeline.
 
 Holds every tunable knob in one place: file lists, Q range, energy window,
-binning, MCMC settings, output directory. 
+binning, MCMC settings and output directory. 
 
-Save/restore as JSON forreproducibility.
+Save/restore as JSON for reuse.
 
 """
 from __future__ import annotations
@@ -107,7 +107,7 @@ class Config:
         if self.energy_window <= 0:
             raise ValueError(
                 f"energy_window must be > 0, got {self.energy_window}"
-            ) # energy window should larger than 0
+            ) # energy window should be larger than 0
         if self.n_walkers < 4 or self.n_walkers % 2:
             raise ValueError("n_walkers must be even and ≥ 4")  # emcee requirement
         if self.n_q_bins < 2:
@@ -118,7 +118,7 @@ class Config:
             raise ValueError("n_warmup ≥ 0 and n_keep ≥ 1 required")
 
 
-    #  (de)serialise
+    #  deserialise
     def to_dict(self) -> dict:
         # store as dict
         return asdict(self)

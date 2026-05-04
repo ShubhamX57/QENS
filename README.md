@@ -22,14 +22,14 @@ and **inference machinery**:
 * These are combined into a full forward model
   S(Q, ω) = e<sup>−Q²⟨u²⟩/3</sup> · [translation x rotation] x resolution
   with a measured-kernel resolution path (use the frozen-sample
-  S(Q, ω) directly — Lorentzian wings of real instruments don't fit a
+  S(Q, ω) directly : Lorentzian wings of real instruments don't fit a
   Gaussian).
 * Inference is a joint-Q likelihood across **all** Q-bins simultaneously,
   with NNLS amplitude fitting per bin. MAP search is multi-start
   Nelder-Mead; MCMC is `emcee` (with a pure-NumPy Metropolis-Hastings
   fallback). Convergence diagnostics (autocorrelation time, Gelman-Rubin
   R̂) are reported automatically.
-* Custom forward models can be registered without modifying core code —
+* Custom forward models can be registered without modifying core code :
   see [Custom models](#custom-models) below.
 
 ---

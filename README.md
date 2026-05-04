@@ -1,5 +1,6 @@
 <p align="center">
-  <img src="logo/qens_logo_dark.png" width="1000"/>
+  <img src="logo/qens_logo_dark.png#gh-dark-mode-only" width="1000"/>
+  <img src="logo/qens_logo_light.png#gh-light-mode-only" width="1000"/>
 </p>
 
 

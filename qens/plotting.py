@@ -1,9 +1,9 @@
 """
-Figures.
+Plots
 
 Each function here takes already processed inputs (datasets, samples,
-HWHM table) and writes out a single figure. None of them re-compute the
-physics — they're presentation-only. The forward-model evaluations are
+HWHM table) and writes out a single figure. None of them recomputes the
+physics — they're presentation only. The forward-model evaluations are
 done by :mod:'qens.models' and called by the inference layer.
 
 
@@ -32,29 +32,21 @@ from matplotlib.colors import LinearSegmentedColormap, LogNorm
 from scipy.ndimage import gaussian_filter
 from scipy.optimize import nnls
 
-from .models import (
-    ce_hwhm,
-    fickian_hwhm,
-    get_model,
-    ss_hwhm,
-)
+from .models import (ce_hwhm,
+                     fickian_hwhm,
+                     get_model,
+                     ss_hwhm)
 
-__all__ = [
-    "plot_overview",
-    "plot_sqw_map",
-    "plot_per_q_fits",
-    "plot_hwhm_vs_q2",
-    "plot_posteriors",
-    "plot_joint_posterior",
-]
+__all__ = ["plot_overview",
+           "plot_sqw_map",
+           "plot_per_q_fits",
+           "plot_hwhm_vs_q2",
+           "plot_posteriors",
+           "plot_joint_posterior"]
 
 
-_SQW_CMAP = LinearSegmentedColormap.from_list(
-    "qens",
-    ["#0a0e1a", "#0c2d6b", "#1565c0", "#42a5f5",
-     "#e3f2fd", "#ff8f00", "#e65100"],
-    N=512,
-)
+_SQW_CMAP = LinearSegmentedColormap.from_list("qens",
+                                             ["#0a0e1a", "#0c2d6b", "#1565c0", "#42a5f5","#e3f2fd", "#ff8f00", "#e65100"],N=512)
 
 
 
@@ -75,7 +67,7 @@ def _save(fig, save_path):
 
 def plot_overview(dataset: dict, save_path: str | None = None):
     """
-    One-line elastic-peak summary per loaded file. Useful sanity check
+    One line elastic-peak summary per loaded file. Useful sanity check
     after :func:'qens.preprocessing.assign_resolution'.
     """
     names = sorted(dataset)
@@ -170,11 +162,10 @@ def plot_sqw_map(d: dict, ewin: float = 1.2, save_path: str | None = None):
 
 
 
-# per-Q-bin model-vs-data panel
-def plot_per_q_fits(
-    data_bins, sigma_res, params,
-    model: str = "anisotropic_rotor",
-    save_path: str | None = None, **extras,
+# per Q bin model vs data panel
+def plot_per_q_fits(data_bins, sigma_res, params,
+                    model: str = "anisotropic_rotor",
+                    save_path: str | None = None, **extras,
 ):
     """
     Grid of subplots, one per Q-bin, showing data vs forward-model fit.
@@ -218,13 +209,12 @@ def plot_per_q_fits(
 
 
 # Γ(Q) vs Q^2 (legacy approach)
-def plot_hwhm_vs_q2(
-    q_centres, hwhm, hwhm_err,
-    model_results: dict | None = None,
-    samples: np.ndarray | None = None,
-    map_params: tuple | None = None,
-    res_hwhm_uev: float = 50,
-    save_path: str | None = None,
+def plot_hwhm_vs_q2(q_centres, hwhm, hwhm_err,
+                    model_results: dict | None = None,
+                    samples: np.ndarray | None = None,
+                    map_params: tuple | None = None,
+                    res_hwhm_uev: float = 50,
+                    save_path: str | None = None,
 ):
     """
     Γ(Q) vs Q^2 with optional model curves and posterior fan.
@@ -240,7 +230,7 @@ def plot_hwhm_vs_q2(
 
 
     if samples is not None and map_params is not None and len(map_params) >= 2:
-        # CE posterior fan, only meaningful for CE-shaped models
+        # CE posterior fan, only meaningful for CE shaped models
         d_s, l_s = samples[:, 0], np.abs(samples[:, 1])
         rng = np.random.default_rng(0)
         idx = rng.choice(len(d_s), min(300, len(d_s)), replace=False)
@@ -299,12 +289,11 @@ def plot_hwhm_vs_q2(
 
 
 # 1D marginal posteriors
-def plot_posteriors(
-    samples: np.ndarray,
-    model: str = "anisotropic_rotor",
-    reference_values: dict | None = None,
-    derived: dict | None = None,
-    save_path: str | None = None,
+def plot_posteriors(samples: np.ndarray,
+                    model: str = "anisotropic_rotor",
+                    reference_values: dict | None = None,
+                    derived: dict | None = None,
+                    save_path: str | None = None,
 ):
     """
     Histograms with median, 95% CI band and reference lines.
@@ -327,9 +316,8 @@ def plot_posteriors(
 
 
     fm = get_model(model)
-    panels: list[tuple[str, np.ndarray]] = [
-        (n, samples[:, i]) for i, n in enumerate(fm.param_names)
-    ]
+    panels: list[tuple[str, np.ndarray]] = [(n, samples[:, i]) for i, n in enumerate(fm.param_names)]
+    
     if derived:
         for name, fn in derived.items():
             panels.append((name, np.asarray(fn(samples))))
@@ -381,13 +369,12 @@ def plot_posteriors(
 
 
 # joint posterior for a pair of parameters
-def plot_joint_posterior(
-    samples: np.ndarray,
-    indices: tuple[int, int] = (0, 1),
-    labels: tuple[str, str] = ("p₁", "p₂"),
-    map_point: tuple[float, float] | None = None,
-    reference_point: tuple[float, float] | None = None,
-    save_path: str | None = None,
+def plot_joint_posterior(samples: np.ndarray,
+                         indices: tuple[int, int] = (0, 1),
+                         labels: tuple[str, str] = ("p₁", "p₂"),
+                         map_point: tuple[float, float] | None = None,
+                         reference_point: tuple[float, float] | None = None,
+                         save_path: str | None = None,
 ):
     """
     Scatter+contour for any two parameter columns of ''samples''.

@@ -24,13 +24,11 @@ from .constants import NEUTRON_MASS_KG, HBAR_JS, MEV_TO_J
 
 
 
-__all__ = [
-    "inspect_nxspe",
-    "read_nxspe",
-    "read_nxspe_with_overrides",
-    "load_dataset",
-    "compute_q_from_2theta",
-]
+__all__ = ["inspect_nxspe",
+           "read_nxspe",
+           "read_nxspe_with_overrides",
+           "load_dataset",
+           "compute_q_from_2theta"]
 
 
 
@@ -91,11 +89,9 @@ def inspect_nxspe(path: str) -> None:
 
 
 # core reader
-_NXSPE_POLAR_PATHS = (
-    ("data", "polar"),
-    ("instrument/detector", "polar"),
-    ("instrument/detector_1", "polar_angle"),
-)
+_NXSPE_POLAR_PATHS = (("data", "polar"),
+                      ("instrument/detector", "polar"),
+                      ("instrument/detector_1", "polar_angle"))
 
 
 
@@ -160,10 +156,9 @@ def _parse_filename(name: str) -> tuple[str, int, str]:
     base = name.replace(".nxspe", "")
     parts = base.split("_")
     if len(parts) < 4:
-        raise ValueError(
-            f"Filename '{name}' does not match "
-            "<sample>_<temperature>_<Eix100>_<kind>"
-        )
+        raise ValueError(f"Filename '{name}' does not match "
+                         "<sample>_<temperature>_<Eix100>_<kind>")
+
     sample = parts[0]
     try:
         temp = int(parts[1])
@@ -241,12 +236,10 @@ def read_nxspe(path: str) -> dict:
 
     q = compute_q_from_2theta(two_theta, ei)
 
-    return dict(
-        name=name, sample=sample, temp=temp, ei=ei, kind=kind,
-        e_raw=e_raw, e=e_raw.copy(),
-        data=data, errs=errs, good=good, q=q,
-        format="hdf5",
-    )
+    return dict(name=name, sample=sample, temp=temp, ei=ei, kind=kind,
+                e_raw=e_raw, e=e_raw.copy(),
+                data=data, errs=errs, good=good, q=q,
+                format="hdf5")
 
 
 
@@ -310,14 +303,12 @@ def read_nxspe_with_overrides(
         raise ValueError(f"No usable detectors in '{name}'")
 
 
-    return dict(
-        name=name, sample=sample or "?", temp=temp if temp is not None else -1,
-        ei=ei, kind=kind or "inc",
-        e_raw=e_raw, e=e_raw.copy(),
-        data=data, errs=errs, good=good,
-        q=compute_q_from_2theta(two_theta, ei),
-        format="hdf5",
-    )
+    return dict(name=name, sample=sample or "?", temp=temp if temp is not None else -1,
+                ei=ei, kind=kind or "inc",
+                e_raw=e_raw, e=e_raw.copy(),
+                data=data, errs=errs, good=good,
+                q=compute_q_from_2theta(two_theta, ei),
+                format="hdf5")
 
 
 
@@ -325,11 +316,10 @@ def read_nxspe_with_overrides(
 
 # multi file loader
 
-def load_dataset(
-    file_list: Iterable[str],
-    data_dir: str = ".",
-    critical_files: Iterable[str] | None = None,
-    verbose: bool = True,
+def load_dataset(file_list: Iterable[str],
+                 data_dir: str = ".",
+                 critical_files: Iterable[str] | None = None,
+                 verbose: bool = True,
 ) -> dict[str, dict]:
     """
     Load several .nxspe files into a dict keyed by filename.

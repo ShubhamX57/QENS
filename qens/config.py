@@ -72,7 +72,7 @@ class Config:
     files_to_fit: List[str] = field(default_factory=list)
     primary_file: str = ""
     resolution_file: str | None = None
-    frozen_temp_threshold: int = 270
+    frozen_temp_threshold: int = 270 # defaukt threhold 
 
 
     #  fit window
@@ -103,27 +103,29 @@ class Config:
         if self.q_min >= self.q_max:
             raise ValueError(
                 f"q_min ({self.q_min}) must be < q_max ({self.q_max})"
-            )
+            ) # check Q range
         if self.energy_window <= 0:
             raise ValueError(
                 f"energy_window must be > 0, got {self.energy_window}"
-            )
+            ) # energy window should larger than 0
         if self.n_walkers < 4 or self.n_walkers % 2:
-            raise ValueError("n_walkers must be even and ≥ 4")
+            raise ValueError("n_walkers must be even and ≥ 4")  # emcee requirement
         if self.n_q_bins < 2:
             raise ValueError("n_q_bins must be ≥ 2")
         if self.thin < 1:
-            raise ValueError("thin must be ≥ 1")
+            raise ValueError("thin must be ≥ 1") # >= 1 to aviod error and infinite loop
         if self.n_warmup < 0 or self.n_keep < 1:
             raise ValueError("n_warmup ≥ 0 and n_keep ≥ 1 required")
 
 
     #  (de)serialise
     def to_dict(self) -> dict:
+        # store as dict
         return asdict(self)
 
 
     def to_json(self, path: str) -> None:
+        # store as json
         with open(path, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
 
@@ -135,6 +137,7 @@ class Config:
 
 
     def __repr__(self) -> str:
+        # ouput parameters and values for viewing
         lines = ["Config("]
         for k, v in self.to_dict().items():
             lines.append(f"    {k} = {v!r},")

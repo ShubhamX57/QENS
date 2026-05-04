@@ -15,6 +15,13 @@ All figures use the same colour scheme:
     posterior fan / data  — slate  '#2471a3'
     resolution            — grey   '#888'
 
+    elastic component     — blue   ''#1565c0''
+    quasi-elastic         — orange ''#e67e22''
+    fit / MAP             — red    ''#c0392b''
+    posterior fan / data  — slate  ''#2471a3''
+    resolution            — grey   ''#888''
+
+    
 Save by passing ''save_path''; if None the figure is returned for the
 user to handle.
 """
@@ -28,6 +35,16 @@ from scipy.ndimage import gaussian_filter
 from scipy.optimize import nnls
 
 from .models import ce_hwhm, fickian_hwhm, ss_hwhm, get_model
+from matplotlib.colors            import LogNorm, LinearSegmentedColormap
+from scipy.ndimage                import gaussian_filter
+from scipy.optimize               import nnls
+
+
+from .models import (
+    fickian_hwhm, ce_hwhm, ss_hwhm, get_model,
+)
+
+
 __all__ = [
     "plot_overview",
     "plot_sqw_map",

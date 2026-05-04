@@ -1,38 +1,32 @@
 ---
 name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
+about: Create a report to help us improve QENS
+title: "[BUG] "
+labels: bug
 assignees: ''
 
 ---
 
+```markdown
 **Describe the bug**
-A clear and concise description of what the bug is.
+Clear description of the issue.
 
 **To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+```python
+import qens
+# Minimal code to reproduce
+```
 
 **Expected behavior**
-A clear and concise description of what you expected to happen.
+What should happen.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+**Environment**
+- OS: [e.g., macOS 14]
+- Python: [e.g., 3.10]
+- QENS version: [e.g., 0.1.0]
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
-
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
-
-**Additional context**
-Add any other context about the problem here.
+**Error traceback**
+```
+Paste error here
+```
+```

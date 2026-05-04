@@ -92,7 +92,7 @@ the anisotropic-rotor model is used) the underlying paper:
 > Richardson H., McColl K., Nilsen G. J., Armstrong J., McCluskey A. R.,
 > *Lost in Translation: Simulation-Informed Bayesian Inference Improves
 > Understanding of Molecular Motion From Neutron Scattering*,
-> arXiv:2603.06080 (2026).
+> arXiv:2603.06080 (2026). https://arxiv.org/abs/2603.06080
 
 ---
 

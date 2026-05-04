@@ -11,7 +11,6 @@ NEUTRON_MASS_KG = 1.67493e-27
 
 
 # Reduced Planck constant in J·s
-# ħ (J·s)
 HBAR_JS = 1.05457e-34
 
 
@@ -22,7 +21,6 @@ MEV_TO_J = 1.60218e-22
 
 
 # Reduced Planck constant in meV·ps — working constant for QENS
-# ħ (meV·ps)
 HBAR_MEV_PS = 0.65821
 
 

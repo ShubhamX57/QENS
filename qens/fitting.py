@@ -1,6 +1,6 @@
 """
 Inference primitives: likelihood, prior, MAP search, plus utilities to bin
-the data and build per-Q-bin resolution kernels.
+the data and build per Q bin resolution kernels.
 
 """
 from __future__ import annotations
@@ -10,27 +10,19 @@ import os
 
 import numpy as np
 from scipy.optimize import curve_fit, minimize, nnls
-from scipy.signal   import fftconvolve
+from scipy.signal import fftconvolve
 
-from .config       import Config
-from .models       import (
-    lorentz, gnorm, predict_sqw,
-    fickian_hwhm, ce_hwhm, ss_hwhm,
-    bessel_weights, get_model,
-)
-from .models.forward import _make_resolution_kernel
+from .config import Config
+from .models import get_model
 
-
-__all__ = [
-    "build_data_bins",
-    "build_resolution_bins",
-    "extract_hwhm",
-    "save_hwhm_csv",
-    "log_likelihood",
-    "log_prior",
-    "log_posterior",
-    "find_map"
-]
+__all__ = ["build_data_bins",
+           "build_resolution_bins",
+           "extract_hwhm",
+           "save_hwhm_csv",
+           "log_likelihood",
+           "log_prior",
+           "log_posterior",
+           "find_map"]
 
 
 
@@ -45,10 +37,9 @@ def _percentile_edges(values: np.ndarray, n_bins: int) -> np.ndarray:
 
 
 
-def _average_bin(
-    indices: np.ndarray,
-    data_arr: np.ndarray,
-    err_arr: np.ndarray,
+def _average_bin(indices: np.ndarray,
+                 data_arr: np.ndarray,
+                 err_arr: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Mean spectrum and combined error spectrum over a set of detector indices.
@@ -66,9 +57,8 @@ def _average_bin(
 
 
 
-def build_data_bins(
-    d: dict,
-    cfg: Config | None = None,
+def build_data_bins(d: dict,
+                    cfg: Config | None = None,
 ) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, float]]:
     """
     Bin a dataset into  "n_q_bins " equal occupancy Q-bins.
@@ -118,21 +108,18 @@ def build_data_bins(
         if mask.sum() < 2:
             continue
         idxs = good[mask]
-        spec, errs = _average_bin(
-            idxs,
-            d["data"][:, emask],
-            d["errs"][:, emask],
-        )
+        spec, errs = _average_bin(idxs,
+                                  d["data"][:, emask],
+                                  d["errs"][:, emask])
         bins.append((ew, spec, errs, float(q_arr[mask].mean())))
     return bins
 
 
 
 
-def build_resolution_bins(
-    d_ref: dict,
-    cfg: Config | None = None,
-    q_centres: np.ndarray | None = None,
+def build_resolution_bins(d_ref: dict,
+                          cfg: Config | None = None,
+                          q_centres: np.ndarray | None = None,
 ) -> list[np.ndarray]:
     """
     Build a measured per Q bin resolution kernel from a frozen sample.
@@ -140,22 +127,22 @@ def build_resolution_bins(
     For each Q bin in the data, average the frozen sample spectra at
     detectors with similar Q to produce a measured resolution function.
     Use this kernel inside the forward model, it captures the Lorentzian
-    wings of the real instrument that a pure-Gaussian fit misses.
+    wings of the real instrument that a pure Gaussian fit misses.
 
     Parameters
     ----------
     d_ref : dict
-        Resolution-reference dataset (typically the frozen low-T inc file).
+        Resolution reference dataset (typically the frozen low T inc file).
         Must already have  "e ",  "good ",  "q ",  "data ".
 
     cfg : Config
     q_centres : array, optional
-        If given, build kernels at these Q-centres instead of percentile bins.
+        If given, build kernels at these Q centres instead of percentile bins.
         Useful when matching the binning of a different (target) dataset.
 
     Returns
     -------
-    list of 1-D arrays, one per Q-bin, on the same ω grid as
+    list of 1D arrays, one per Q-bin, on the same ω grid as
     :func:`build_data_bins`.
 
 
@@ -205,9 +192,8 @@ def build_resolution_bins(
 
 
 
-def extract_hwhm(
-    d: dict,
-    cfg: Config | None = None,
+def extract_hwhm(d: dict,
+                 cfg: Config | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     
@@ -221,7 +207,7 @@ def extract_hwhm(
 
     Returns
     -------
-    q_centres, hwhm, hwhm_err, eisf : 1-D arrays of length n_qbins (or fewer
+    q_centres, hwhm, hwhm_err, eisf : 1D arrays of length n_qbins (or fewer
     if some bins fail to fit).
 
     """
@@ -271,18 +257,18 @@ def extract_hwhm(
         if len(sel) < 2:
             continue
 
-        spec, errs = _average_bin(
-            good[sel], d["data"][:, emask], d["errs"][:, emask]
-        )
+        spec, errs = _average_bin(good[sel], d["data"][:, emask], d["errs"][:, emask])
+        
         peak = max(spec.max(), 1.0)
+        
         p0 = [peak * 0.5, peak * 0.5, max(sr, 0.05), max(spec.min(), 0.0)]
         try:
             popt, pcov = curve_fit(
                 _model, ew, spec, p0=p0, sigma=errs,
                 bounds=([0, 0, sr * 0.1, 0],
                         [np.inf, np.inf, cfg.energy_window * 0.9, np.inf]),
-                maxfev=8000,
-            )
+                maxfev=8000)
+            
         except Exception:
             continue
         gamma = abs(popt[2])
@@ -299,9 +285,8 @@ def extract_hwhm(
 
 
 
-def save_hwhm_csv(
-    q_centres: np.ndarray, hwhm: np.ndarray, hwhm_err: np.ndarray,
-    eisf: np.ndarray, save_dir: str,
+def save_hwhm_csv(q_centres: np.ndarray, hwhm: np.ndarray, hwhm_err: np.ndarray,
+                  eisf: np.ndarray, save_dir: str,
 ) -> str:
     """
     Write the HWHM table to "<save_dir>/hwhm_table.csv ".
@@ -335,9 +320,8 @@ def _resolve_kernel_for_bin(sigma_res, k):
 
 
 
-def log_prior(
-    params: np.ndarray,
-    model: str = "anisotropic_rotor",
+def log_prior(params: np.ndarray,
+              model: str = "anisotropic_rotor",
 ) -> float:
     """
     
@@ -352,12 +336,11 @@ def log_prior(
 
 
 
-def log_likelihood(
-    params: np.ndarray,
-    data_bins: list,
-    sigma_res,
-    model: str = "anisotropic_rotor",
-    **extras,
+def log_likelihood(params: np.ndarray,
+                   data_bins: list,
+                   sigma_res,
+                   model: str = "anisotropic_rotor",
+                   **extras,
 ) -> float:
     """
     Joint X^2 log-likelihood across all Q-bins.
@@ -415,10 +398,9 @@ def log_likelihood(
 
 
 
-def log_posterior(
-    params, data_bins, sigma_res,
-    model: str = "anisotropic_rotor",
-    **extras,
+def log_posterior(params, data_bins, sigma_res,
+                  model: str = "anisotropic_rotor",
+                  **extras,
 ) -> float:
     """
     Convenience wrapper: prior + likelihood.
@@ -433,14 +415,13 @@ def log_posterior(
 
 
 
-def find_map(
-    data_bins: list,
-    sigma_res,
-    model: str = "anisotropic_rotor",
-    cfg: Config | None = None,
-    n_starts: int | None = None,
-    verbose: bool = True,
-    **extras,
+def find_map(data_bins: list,
+             sigma_res,
+             model: str = "anisotropic_rotor",
+             cfg: Config | None = None,
+             n_starts: int | None = None,
+             verbose: bool = True,
+             **extras,
 ) -> tuple[np.ndarray, float]:
     """
     Maximum- a posteriori search via Nelder Mead from random starts.
@@ -494,11 +475,9 @@ def find_map(
 
 
     if best_p is None:
-        raise RuntimeError(
-            f"MAP search failed for all {n_starts} starts — likelihood -inf "
-            f"everywhere in the prior box. Check data, priors, and "
-            f"resolution kernel."
-        )
+        raise RuntimeError(f"MAP search failed for all {n_starts} starts — likelihood -inf "
+                           f"everywhere in the prior box. Check data, priors, and "
+                           f"resolution kernel.")
 
 
     if verbose:

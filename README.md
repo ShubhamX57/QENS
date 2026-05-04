@@ -54,7 +54,7 @@ Then use normally:
 import qens
 ```
 
-> **Note**: The name `qens` was already taken on PyPI. We're working on publishing as **`uqens`** (Unified Quasi-Elastic Neutron Scattering analysis) soon.
+> **Note**: The name `qens` was already taken on PyPI. We are working on publishing as **`uqens`** (Unified Quasi-Elastic Neutron Scattering analysis) soon.
 
 
 ---

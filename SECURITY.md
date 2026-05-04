@@ -2,20 +2,25 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
-
 | Version | Supported          |
 | ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| 0.1.x   | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+If you discover a security vulnerability in QENS, please report it privately rather than opening a public issue.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+**Email**: shubham57shinde57@gmail.com, wilf.bates@gmail.com, lm25353@bristol.ac.uk, ef25584@bristol.ac.uk.
+
+**What to include:**
+- Description of the vulnerability
+- Steps to reproduce
+- Potential impact
+- Suggested fix (if any)
+
+**What to expect:**
+- Acknowledgment within 48 hours
+- Status update within 5 business days
+- Public disclosure after fix is released
+
+We take all security reports seriously and will work to resolve issues promptly.

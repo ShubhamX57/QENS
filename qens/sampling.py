@@ -10,9 +10,7 @@ from .config  import Config
 from .fitting import log_posterior
 from .models  import get_model
 
-__all__ = [
-    "run_mcmc", "summarise", "summarise_samples", "gelman_rubin",
-]
+__all__ = ["run_mcmc", "summarise", "summarise_samples", "gelman_rubin"]
 
 
 
@@ -46,9 +44,8 @@ def gelman_rubin(chains: list[np.ndarray]) -> float:
 
 # emcee path
 
-def _initial_ball(
-    p_map: np.ndarray, n_walkers: int, prior_lo, prior_hi, rng,
-    fractional_jitter: float = 0.03,
+def _initial_ball(p_map: np.ndarray, n_walkers: int, prior_lo, prior_hi, rng,
+                  fractional_jitter: float = 0.03,
 ) -> np.ndarray:
     """
     
@@ -71,8 +68,7 @@ def _initial_ball(
 
 
 
-def _run_emcee(
-    data_bins, sigma_res, p_map, model, cfg, extras, verbose,
+def _run_emcee(data_bins, sigma_res, p_map, model, cfg, extras, verbose,
 ):
     import emcee
     fm = get_model(model)
@@ -160,14 +156,13 @@ def _run_mh(data_bins, sigma_res, p_map, model, cfg, extras, verbose):
 
 # top-level entry point
 
-def run_mcmc(
-    data_bins,
-    sigma_res,
-    p_map,
-    model: str = "anisotropic_rotor",
-    cfg: Config | None = None,
-    verbose: bool = True,
-    **extras,
+def run_mcmc(data_bins,
+             sigma_res,
+             p_map,
+             model: str = "anisotropic_rotor",
+             cfg: Config | None = None,
+             verbose: bool = True,
+             **extras,
 ) -> np.ndarray:
     """Run MCMC over a registered forward model.
 
@@ -236,11 +231,10 @@ def summarise(arr: np.ndarray, label: str = "", verbose: bool = True
 
 
 
-def summarise_samples(
-    samples: np.ndarray,
-    model: str = "anisotropic_rotor",
-    derived: dict | None = None,
-    verbose: bool = True,
+def summarise_samples(samples: np.ndarray,
+                      model: str = "anisotropic_rotor",
+                      derived: dict | None = None,
+                      verbose: bool = True,
 ) -> dict[str, tuple[float, float, float]]:
     """
     Per-parameter median + 95% CI for a registered model.

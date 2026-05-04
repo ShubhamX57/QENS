@@ -9,6 +9,11 @@ done by :mod:'qens.models' and called by the inference layer.
 
 All figures use the same colour scheme:
 
+    elastic component     — blue   '#1565c0'
+    quasi-elastic         — orange '#e67e22'
+    fit / MAP             — red    '#c0392b'
+    posterior fan / data  — slate  '#2471a3'
+    resolution            — grey   '#888'
 
     elastic component     — blue   ''#1565c0''
     quasi-elastic         — orange ''#e67e22''
@@ -19,19 +24,17 @@ All figures use the same colour scheme:
     
 Save by passing ''save_path''; if None the figure is returned for the
 user to handle.
-
-
 """
-
 
 from __future__ import annotations
 
-
-from typing import Iterable
-
-
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.colors import LinearSegmentedColormap, LogNorm
+from scipy.ndimage import gaussian_filter
+from scipy.optimize import nnls
+
+from .models import ce_hwhm, fickian_hwhm, ss_hwhm, get_model
 from matplotlib.colors            import LogNorm, LinearSegmentedColormap
 from scipy.ndimage                import gaussian_filter
 from scipy.optimize               import nnls

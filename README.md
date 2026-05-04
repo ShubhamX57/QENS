@@ -34,25 +34,27 @@ and **inference machinery**:
 
 ---
 
-## Installation
+
+###  Package Installation
+
+The `qens` package is not yet published on PyPI. Install directly from this repository:
 
 ```bash
-pip install qens
-# or, with the recommended sampler:
-pip install "qens[mcmc]"
-```
-
-From source:
-
-```bash
+# Clone and install locally
 git clone https://github.com/ShubhamX57/QENS.git
-cd qens
-pip install -e ".[mcmc]"
+cd QENS
+pip install -e .
+
+# Or install directly from GitHub
+pip install git+https://github.com/ShubhamX57/QENS.git
 ```
 
-Dependencies: `numpy`, `scipy`, `h5py`, `matplotlib`. `emcee` is optional
-(strongly recommended); without it the library falls back to a 4-chain
-Metropolis-Hastings sampler.
+Then use normally:
+```python
+import qens
+```
+
+> **Note**: The name `qens` was already taken on PyPI. We're working on publishing as **`uqens`** (Unified Quasi-Elastic Neutron Scattering analysis) soon.
 
 
 ---

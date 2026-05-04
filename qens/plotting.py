@@ -9,6 +9,7 @@ done by :mod:'qens.models' and called by the inference layer.
 
 All figures use the same colour scheme:
 
+
     elastic component     — blue   ''#1565c0''
     quasi-elastic         — orange ''#e67e22''
     fit / MAP             — red    ''#c0392b''

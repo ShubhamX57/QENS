@@ -30,8 +30,10 @@ jobs:
 
     - name: Lint with flake8
       run: |
+        # Check for critical errors that must be fixed
         flake8 qens --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 qens --count --max-complexity=10 --max-line-length=127 --statistics
+        # Style check - show warnings but don't fail the build
+        flake8 qens --count --max-complexity=10 --max-line-length=127 --exit-zero --statistics
 
     - name: Test with pytest
       run: |

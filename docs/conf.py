@@ -10,8 +10,8 @@ sys.path.insert(0, os.path.abspath(".."))
 project   = "qens"
 copyright = "2026, QENS Analysis Contributors"
 author    = "QENS Analysis Contributors"
-release   = "2.0.0"
-version   = "2.0"
+release   = "0.1.0"
+version   = "0.1.0"
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -25,6 +25,7 @@ extensions = [
     "sphinx_design",
     "myst_parser"
 ]
+
 
 autodoc_default_options = {
     "members": True, "undoc-members": False,

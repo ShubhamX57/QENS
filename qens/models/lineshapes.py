@@ -13,7 +13,7 @@ GAMMA_FLOOR = 1e-5
 
 
 def lorentz(omega: np.ndarray, gamma: float) -> np.ndarray:
-    """Area-normalised Lorentzian, half-width-at-half-maximum ``gamma``.
+    """Area normalised Lorentzian, half-width-at-half-maximum ``gamma``.
 
     .. math::
         L(\\omega; \\Gamma) = \\frac{1}{\\pi}
@@ -47,10 +47,9 @@ def gnorm(omega: np.ndarray, sigma: float) -> np.ndarray:
     return np.exp(-0.5 * (w / sigma) ** 2) / (sigma * np.sqrt(2 * np.pi))
 
 
-def lorentz_sum(
-    omega: np.ndarray,
-    weights: np.ndarray,
-    gammas: np.ndarray,
+def lorentz_sum(omega: np.ndarray,
+                weights: np.ndarray,
+                gammas: np.ndarray,
 ) -> np.ndarray:
     """Weighted sum of Lorentzians: ``Σ w_i L(ω; Γ_i)``.
 

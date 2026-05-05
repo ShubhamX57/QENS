@@ -9,12 +9,10 @@ from scipy.special import spherical_jn
 
 from ..constants import HBAR_MEV_PS
 
-__all__ = [
-    "rot_widths_isotropic",
-    "rot_widths_anisotropic",
-    "bessel_weights",
-    "DEFAULT_RADIUS",
-]
+__all__ = ["rot_widths_isotropic",
+           "rot_widths_anisotropic",
+           "bessel_weights",
+           "DEFAULT_RADIUS"]
 
 
 
@@ -61,11 +59,9 @@ def rot_widths_anisotropic(d_t: float, d_s: float) -> tuple[float, float, float]
     """
     if d_t <= 0 or d_s <= 0:
         raise ValueError("d_t and d_s must be > 0")
-    return (
-        HBAR_MEV_PS * (d_s + d_t),
-        HBAR_MEV_PS * 6.0 * d_t,
-        HBAR_MEV_PS * (4.0 * d_s + 2.0 * d_t),
-    )
+    return (HBAR_MEV_PS * (d_s + d_t),
+            HBAR_MEV_PS * 6.0 * d_t,
+            HBAR_MEV_PS * (4.0 * d_s + 2.0 * d_t))
 
 
 

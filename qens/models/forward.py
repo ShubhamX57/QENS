@@ -1,6 +1,5 @@
 """
-Full forward model for QENS line-shape inference.
-
+Full forward model for QENS line shape inference.
 
 """
 from __future__ import annotations
@@ -13,10 +12,7 @@ from scipy.signal import fftconvolve
 
 from ..constants import HBAR_MEV_PS
 from .lineshapes  import lorentz, gnorm, GAMMA_FLOOR
-from .rotation    import (
-    rot_widths_isotropic, rot_widths_anisotropic,
-    bessel_weights, DEFAULT_RADIUS,
-)
+from .rotation    import (rot_widths_isotropic, rot_widths_anisotropic, bessel_weights, DEFAULT_RADIUS)
 
 __all__ = ["predict_sqw", "ForwardModel"]
 
@@ -57,16 +53,15 @@ def _make_resolution_kernel(omega: np.ndarray, sigma_res) -> np.ndarray:
 
 # core forward-model evaluator
 
-def predict_sqw(
-    omega: np.ndarray,
-    q: float,
-    *,
-    d_translation: float,
-    u2: float,
-    rotation: tuple[float, ...],
-    rotation_model: str = "anisotropic",
-    sigma_res,
-    radius: float = DEFAULT_RADIUS,
+def predict_sqw(omega: np.ndarray,
+                q: float,
+                *,
+                d_translation: float,
+                u2: float,
+                rotation: tuple[float, ...],
+                rotation_model: str = "anisotropic",
+                sigma_res,
+                radius: float = DEFAULT_RADIUS,
 ) -> np.ndarray:
     """Predict the resolution-convolved S_inc(Q, ω) for one Q-bin.
 
@@ -121,10 +116,8 @@ def predict_sqw(
         # purely translational — single Lorentzian, no rotation
         s_unc = lorentz(omega, gamma_t)
     else:
-        raise ValueError(
-            f"unknown rotation_model {rotation_model!r}; "
-            f"expected 'none', 'isotropic' or 'anisotropic'"
-        )
+        raise ValueError(f"unknown rotation_model {rotation_model!r}; "
+                         f"expected 'none', 'isotropic' or 'anisotropic'")
 
     # Debye-Waller factor
     s_unc *= np.exp(-q * q * u2 / 3.0)

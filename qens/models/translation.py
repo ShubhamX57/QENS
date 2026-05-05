@@ -1,5 +1,5 @@
 """
-Translational-diffusion HWHM models.
+Translational diffusion HWHM models.
 
 
 """

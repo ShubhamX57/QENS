@@ -2,7 +2,7 @@
 Preprocessing: align the elastic peak to ω = 0 and assign each measurement a
 resolution function.
 
-elastic-peak alignment, resolution assignment
+elastic peak alignment, resolution assignment
 
 """
 from __future__ import annotations
@@ -59,20 +59,16 @@ def fit_elastic_peak(d: dict) -> tuple[float, float]:
 
     pk = int(np.argmax(avg))
     try:
-        popt, _ = curve_fit(
-            _gauss, e, avg,
-            p0=[avg[pk], e[pk], 0.05, max(avg.min(), 0.0)],
-            bounds=([0, e[0], 1e-4, -np.inf], [np.inf, e[-1], 2.0, np.inf]),
-            maxfev=8000,
-        )
+        popt, _ = curve_fit(_gauss, e, avg,
+                            p0=[avg[pk], e[pk], 0.05, max(avg.min(), 0.0)],
+                            bounds=([0, e[0], 1e-4, -np.inf], [np.inf, e[-1], 2.0, np.inf]),
+                            maxfev=8000)
         e0 = float(popt[1])
         sig = abs(float(popt[2]))
     except Exception as exc:
-        warnings.warn(
-            f"Elastic-peak fit failed for {d.get('name','?')}: {exc}; "
-            f"falling back to argmax",
-            RuntimeWarning, stacklevel=2,
-        )
+        warnings.warn(f"Elastic-peak fit failed for {d.get('name','?')}: {exc}; "
+                      f"falling back to argmax",
+                      RuntimeWarning, stacklevel=2)
         e0 = float(e[pk])
         sig = 0.043  # sensible default ~ IRIS resolution
 
@@ -115,7 +111,7 @@ def assign_resolution(
         If given, ``cfg.resolution_file`` and ``cfg.frozen_temp_threshold``
         are honoured.
     verbose : bool
-        If True, print a per-file summary.
+        If True, print a per file summary.
 
 
     """
@@ -144,7 +140,7 @@ def assign_resolution(
                       RuntimeWarning, stacklevel=2)
 
 
-    # auto-pick: every frozen INC file is a resolution ref for its E_i, does this by ensuring inc spectrum is below threshold temp
+    # auto pick: every frozen INC file is a resolution ref for its E_i, does this by ensuring inc spectrum is below threshold temp
     for fname, d in dataset.items():
         if (d["kind"] == "inc"
                 and d["temp"] <= cfg.frozen_temp_threshold
@@ -177,12 +173,10 @@ def assign_resolution(
             d["sigma_res"] = d["sig_raw"]
             d["res_source"] = "raw_inc_inflated"
             d["res_file"] = None
-            warnings.warn(
-                f"No resolution reference for {fname} (Eᵢ={ei:.2f} meV). "
-                f"Using its own elastic-peak fit — sigma may be inflated by "
-                f"QENS broadening.",
-                RuntimeWarning, stacklevel=2,
-            )
+            warnings.warn(f"No resolution reference for {fname} (Eᵢ={ei:.2f} meV). "
+                          f"Using its own elastic-peak fit — sigma may be inflated by "
+                          f"QENS broadening.",
+                          RuntimeWarning, stacklevel=2)
         d["fwhm_res"] = GAUSSIAN_FWHM_FACTOR * d["sigma_res"]
 
 

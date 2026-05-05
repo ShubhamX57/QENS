@@ -26,7 +26,7 @@ Full Script
        resolution_file = "benzene_260_360_inc.nxspe",
        q_min=0.3, q_max=2.5,
        energy_window=0.8,
-       n_q_bins=13,
+       n_q_bins=13
    )
 
    # Load and pre-process
@@ -45,14 +45,14 @@ Full Script
    # Fit Fickian model
    p_fick, cov_fick = curve_fit(
        fickian_hwhm, q, gamma, sigma=gerr,
-       p0=[0.15], bounds=([1e-3], [3.0]),
+       p0=[0.15], bounds=([1e-3], [3.0])
    )
    print(f"Fickian  D = {p_fick[0]:.4f} ± {cov_fick[0,0]**0.5:.4f} Å²/ps")
 
    # Fit Chudley-Elliott model
    p_ce, cov_ce = curve_fit(
        ce_hwhm, q, gamma, sigma=gerr,
-       p0=[0.15, 2.0], bounds=([1e-3, 0.1], [3.0, 6.0]),
+       p0=[0.15, 2.0], bounds=([1e-3, 0.1], [3.0, 6.0])
    )
    print(f"CE       D = {p_ce[0]:.4f} ± {cov_ce[0,0]**0.5:.4f} Å²/ps"
          f"   ℓ = {p_ce[1]:.3f} Å")

@@ -35,7 +35,7 @@ Minimal Example
        param_names = ("D_slow", "D_fast", "frac_fast"),
        prior_lo    = (1e-4, 1e-3, 0.0),
        prior_hi    = (1.0,  3.0,  1.0),
-       predict     = predict_two_lorentzian,
+       predict     = predict_two_lorentzian
    )
 
 The model is now usable everywhere a built-in name would be:
@@ -67,7 +67,7 @@ changing the physics:
        prior_lo    = (1e-4, 0.0, 1e-3, 0.05),   # D_s must be ≥ 0.05
        prior_hi    = (0.5,  0.3, 1.0,  2.0),
        predict     = old.predict,
-       overwrite   = True,
+       overwrite   = True
    )
 
 Passing Extra Fixed Parameters
@@ -87,7 +87,7 @@ molecular radius, or a fixed background level):
        prior_lo    = (1e-4, 0.0, 1e-3),
        prior_hi    = (1.0,  0.5, 5.0),
        predict     = predict_rotor_custom,
-       extras      = {"radius": 3.12},    # naphthalene
+       extras      = {"radius": 3.12}    # naphthalene
    )
 
 predict() Signature Contract

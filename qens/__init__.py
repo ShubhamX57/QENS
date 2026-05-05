@@ -6,7 +6,7 @@ Open source toolbox for end to end QENS data analysis on ISIS format
 Mantid produced inelastic neutron scattering data.
 
 """
-__version__ = "2.0.0"
+__version__ = "0.1.0"
 __author__  = "qens contributors"
 __license__ = "MIT"
 

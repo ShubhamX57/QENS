@@ -82,6 +82,23 @@ qens/
 ├── sampling.py             emcee + MH fallback, summary, R̂
 └── plotting.py             publication figures
 ```
+---
+## Notebook
+
+If looking for a simple method of analysis of qens data, the [notebook_app](https://github.com/ShubhamX57/QENS/blob/main/Notebook_app.ipynb) is a highly versatile quick method of performing model pre-processing, fitting and analysis. 
+
+Simply:
+- select the correct data folder and pick the correct dataset(s) to analyse
+- choose appropriate physical model(built in or self written)
+- Select least squares or Bayesian fitting method
+- investigate parameter values and plots
+
+
+
+
+
+
+
 
 ---
 

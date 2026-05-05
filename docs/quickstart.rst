@@ -25,7 +25,7 @@ Step 1 — Configure
        n_walkers=32,
        n_warmup=500,
        n_keep=2000,
-       random_seed=42,
+       random_seed=42
    )
    cfg.to_json("config.json")   # save for reproducibility
 
@@ -55,7 +55,7 @@ Step 3 — Build Bins
    data_bins = build_data_bins(target, cfg)
    res_bins  = build_resolution_bins(
        resolution, cfg,
-       q_centres=[b[3] for b in data_bins],
+       q_centres=[b[3] for b in data_bins]
    )
 
 Step 4 — MAP + MCMC
@@ -80,7 +80,7 @@ Step 5 — Report
    summarise_samples(
        samples,
        model="anisotropic_rotor",
-       derived={"D_s/D_t": lambda s: s[:, 3] / s[:, 2]},
+       derived={"D_s/D_t": lambda s: s[:, 3] / s[:, 2]}
    )
 
 Expected output::

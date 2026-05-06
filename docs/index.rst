@@ -36,7 +36,6 @@
        <span class="qens-cmd">pip install "qens[mcmc]"</span>
      </div>
 
-     <!-- ─── Library ecosystem strip ─── -->
      <p class="qens-eco-label">Built with</p>
 
      <div class="qens-eco-strip">
@@ -59,14 +58,9 @@
          <span class="qens-eco-desc">FFT · NNLS · fitting</span>
        </a>
 
-       <!-- Matplotlib: official logo with light/dark switch -->
        <a href="https://matplotlib.org" class="qens-eco-card" title="Matplotlib">
          <div class="qens-eco-logo">
            <img src="https://matplotlib.org/_static/logo_light.svg"
-                class="qens-eco-mpl-light"
-                alt="Matplotlib logo" />
-           <img src="https://matplotlib.org/_static/logo_dark.svg"
-                class="qens-eco-mpl-dark"
                 alt="Matplotlib logo" />
          </div>
          <span class="qens-eco-name">Matplotlib</span>
@@ -109,10 +103,9 @@
          <span class="qens-eco-desc">Ensemble MCMC</span>
        </a>
 
-       <!-- Python: official logo -->
        <a href="https://www.python.org" class="qens-eco-card" title="Python">
          <div class="qens-eco-logo">
-           <img src="https://www.python.org/static/community_logos/python-logo-only.png"
+           <img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg"
                 alt="Python logo" />
          </div>
          <span class="qens-eco-name">Python</span>
@@ -120,12 +113,11 @@
          <span class="qens-eco-desc">Runtime</span>
        </a>
 
-     </div><!-- /.qens-eco-strip -->
+     </div>
 
-   </div><!-- /.qens-hero -->
+   </div>
 
    <style>
-   /* ─── Hero wrapper ─── */
    .qens-hero {
      text-align: center;
      padding: 2.5rem 0 2rem;
@@ -133,7 +125,6 @@
      margin-bottom: 2.5rem;
    }
 
-   /* ─── Logo switch (light / dark) ─── */
    .qens-logo { max-width: min(680px,90%); height:auto; display:block; margin:0 auto 1.8rem; }
    .qens-logo-dark  { display:none; }
    .qens-logo-light { display:block; }
@@ -144,7 +135,6 @@
      body[data-theme="auto"] .qens-logo-dark  { display:block; }
    }
 
-   /* ─── Status badges ─── */
    .qens-badges {
      display:flex; flex-wrap:wrap; justify-content:center;
      gap:0.45rem; margin-bottom:1.4rem;
@@ -160,13 +150,11 @@
      height:auto;
    }
 
-   /* ─── Tagline ─── */
    .qens-tagline {
      font-size:1.0rem; color:var(--color-foreground-secondary,#555);
      max-width:580px; margin:0 auto 1.6rem; line-height:1.65;
    }
 
-   /* ─── Install box ─── */
    .qens-install {
      display:inline-flex; align-items:center;
      background:var(--color-background-secondary,#f8f8f8);
@@ -187,7 +175,6 @@
      body[data-theme="auto"] .qens-prompt { color:#38bdf8; }
    }
 
-   /* ─── "Built with" label ─── */
    .qens-eco-label {
      font-family:var(--font-stack--monospace,monospace);
      font-size:0.68rem; letter-spacing:0.16em; text-transform:uppercase;
@@ -195,14 +182,12 @@
      margin:0 0 1.1rem;
    }
 
-   /* ─── Ecosystem strip ─── */
    .qens-eco-strip {
      display:flex; flex-wrap:wrap;
      justify-content:center; gap:1rem;
      padding:0 1rem 0.5rem;
    }
 
-   /* ─── Individual library card ─── */
    .qens-eco-card {
      display:flex; flex-direction:column; align-items:center; gap:0.35rem;
      width:100px; padding:1.1rem 0.8rem 0.9rem;
@@ -232,7 +217,6 @@
      body[data-theme="auto"] .qens-eco-card:hover { border-color:#38bdf8; box-shadow:0 8px 28px rgba(56,189,248,.15); }
    }
 
-   /* ─── Logo box ─── */
    .qens-eco-logo {
      width:52px; height:52px;
      display:flex; align-items:center; justify-content:center;
@@ -240,7 +224,6 @@
    .qens-eco-logo img, .qens-eco-logo svg {
      width:48px; height:48px; object-fit:contain; display:block;
    }
-   /* icon-only cards: add subtle bg circle */
    .qens-eco-icon {
      border-radius:10px;
      background:rgba(0,0,0,.04);
@@ -248,17 +231,6 @@
    body[data-theme="dark"] .qens-eco-icon,
    body[data-theme="auto"] .qens-eco-icon { background:rgba(255,255,255,.05); }
 
-   /* ─── Matplotlib light/dark logo switch ─── */
-   .qens-eco-mpl-dark  { display:none; }
-   .qens-eco-mpl-light { display:block; }
-   body[data-theme="dark"] .qens-eco-mpl-light { display:none;  }
-   body[data-theme="dark"] .qens-eco-mpl-dark  { display:block; }
-   @media (prefers-color-scheme:dark) {
-     body[data-theme="auto"] .qens-eco-mpl-light { display:none;  }
-     body[data-theme="auto"] .qens-eco-mpl-dark  { display:block; }
-   }
-
-   /* ─── Card text ─── */
    .qens-eco-name {
      font-family:var(--font-stack--monospace,monospace);
      font-size:0.80rem; font-weight:700;
@@ -289,15 +261,12 @@
      body[data-theme="auto"] .qens-eco-desc { color:#4b6080; }
    }
 
-   /* ─── Responsive ─── */
    @media (max-width:520px) {
      .qens-eco-strip { gap:0.6rem; }
      .qens-eco-card  { width:82px; padding:0.8rem 0.5rem 0.7rem; }
      .qens-eco-logo, .qens-eco-logo img, .qens-eco-logo svg { width:38px; height:38px; }
    }
    </style>
-
-.. ── Quick-nav card grid ──────────────────────────────────────────────────────
 
 .. grid:: 2
    :gutter: 2

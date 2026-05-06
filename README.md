@@ -30,8 +30,7 @@ and **inference machinery**:
   Nelder-Mead; MCMC is `emcee` (with a pure-NumPy Metropolis-Hastings
   fallback). Convergence diagnostics (autocorrelation time, Gelman-Rubin
   R̂) are reported automatically.
-* Custom forward models can be registered without modifying core code :
-  see [Custom models](#custom-models) below.
+* Custom forward models can be registered without modifying core code.
 
 ---
 > **Note on documentation**

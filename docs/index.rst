@@ -105,7 +105,7 @@
 
        <a href="https://www.python.org" class="qens-eco-card" title="Python">
          <div class="qens-eco-logo">
-           <img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg"
+           <img src="https://s3.dualstack.us-east-2.amazonaws.com/pythondotorg-assets/media/files/python-logo-only.svg"
                 alt="Python logo" />
          </div>
          <span class="qens-eco-name">Python</span>

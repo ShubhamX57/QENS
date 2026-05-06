@@ -121,4 +121,14 @@ Pull requests welcome. See `tests/` for the existing unit tests
 should land in `qens/models/` and be registered in
 `qens/models/registry.py`.
 
+---
+> **Note on documentation**
+>
+> Inline documentation lives in the code itself: every public function, class,
+> and module has a docstring, and additional comments are added wherever the
+> logic isn't self-explanatory.
+>
+> For full reference material — API docs, the user guide, model descriptions,
+> and worked examples — see the Read the Docs site:
+> **[qens.readthedocs.io/en/latest/index.html](https://qens.readthedocs.io/en/latest/index.html)**
 

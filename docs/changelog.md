@@ -14,7 +14,7 @@ A new core, replacing v0.1.
   convergence diagnostics returned.
 - **Validation:** leave-one-energy-out prediction and synthetic coverage tests.
 - **Plots:** spectra, misfit maps, held-out predictions and a timescale map.
-- **Gate 1:** the published LET analysis rebuilt option by option; see {doc}`gate1`.
+- **Gate 1:** the published LET analysis rebuilt option by option, and its fitting code checked; see {doc}`gate1`.
 - **Engineering:** src layout, tests in CI that can fail, distribution name `uqens`.
 
 ## 0.1.0 (tag `v0.1.0-legacy`)

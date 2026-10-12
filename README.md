@@ -81,9 +81,9 @@ spec = uqens.ModelSpec("measured-res", resolution="measured")  # energies withou
 | D_r (ps⁻¹) | 0.166 (0.163–0.169) | |
 
 The published LET analysis of the same data (Richardson et al. 2026) gives D = 0.182
-with a different model and data selection. With the choices that paper describes,
-these files give D ≈ 0.13 instead; see [docs/gate1.md](docs/gate1.md) and
-`examples/gate1_published_setup.py`.
+with a different model and data selection. Its fitting code stretches the model's energy
+axis by about 1.2 and narrows the stated ±1.25 meV window to ±0.82 meV; with both fixed,
+it gives D = 0.144 at 3.60 meV on these files. See [docs/gate1.md](docs/gate1.md).
 
 ## Tests
 

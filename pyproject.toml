@@ -3,46 +3,51 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "qens"
-version = "0.1.0"
-description = "Bayesian QENS analysis"
+name = "uqens"
+dynamic = ["version"]
+description = "Joint Bayesian analysis of quasi-elastic neutron scattering: one physical model, every incident energy, tested uncertainties"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
-
 dependencies = [
     "numpy>=1.24",
     "scipy>=1.10",
-    "matplotlib>=3.7",
+    "h5py>=3.8",
+    "numba>=0.58",
+    "emcee>=3.1",
 ]
 
 [project.optional-dependencies]
-mcmc = ["emcee>=3.1"]
-dev  = ["pytest>=7", "pytest-cov", "ruff>=0.4"]
+plot = ["matplotlib>=3.7"]
+dev = ["pytest>=7", "ruff>=0.5"]
+docs = [
+    "sphinx>=7.2",
+    "furo>=2024.1.29",
+    "sphinx-copybutton>=0.5",
+    "sphinx-autodoc-typehints>=1.25",
+    "myst-parser>=2.0",
+    "sphinx-design>=0.5",
+]
 
-[project.scripts]
-qens-analyse = "run_analysis:main"
+[project.urls]
+Repository = "https://github.com/ShubhamX57/QENS"
+
+[tool.setuptools.dynamic]
+version = { attr = "uqens.__version__" }
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["qens*"]
+where = ["src"]
 
 [tool.pytest.ini_options]
-testpaths     = ["tests"]
-addopts       = "-ra -q"
-filterwarnings = ["ignore::DeprecationWarning"]
+testpaths = ["tests"]
+addopts = "-ra -q -m 'not slow'"
+markers = ["slow: fits real or synthetic data; minutes, not seconds (run with -m slow)"]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py310"
+extend-exclude = ["archive", "docs"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "UP", "B"]
-ignore = ["E501", "B008"]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/*" = ["F811"]
-
-[tool.coverage.run]
-source = ["qens"]
-omit   = ["tests/*"]
+ignore = ["E741"]  # l is the angular momentum quantum number

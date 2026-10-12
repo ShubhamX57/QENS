@@ -19,5 +19,4 @@ python:
     - method: pip
       path: .
       extra_requirements:
-        - mcmc
-    - requirements: requirements.txt
+        - docs

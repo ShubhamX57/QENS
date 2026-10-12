@@ -8,6 +8,7 @@ from samples.  Check ``Posterior.converged`` before quoting them.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 import emcee
@@ -95,5 +96,11 @@ def sample(problem: Problem, x_best, n_walkers=36, n_steps=3000, burn=None, seed
     sampler = emcee.EnsembleSampler(n_walkers, len(x_best), problem.logpost)
     sampler.run_mcmc(p0, n_steps, progress=progress)
     burn = n_steps // 3 if burn is None else burn
-    tau = sampler.get_autocorr_time(discard=burn, quiet=True)
+    log = logging.getLogger("emcee.autocorr")  # its short-chain warning is reported via `converged`
+    level = log.level
+    log.setLevel(logging.ERROR)
+    try:
+        tau = sampler.get_autocorr_time(discard=burn, quiet=True)
+    finally:
+        log.setLevel(level)
     return Posterior(list(problem.names), sampler.get_chain(), burn, float(sampler.acceptance_fraction.mean()), tau)

@@ -104,7 +104,9 @@ src/uqens/
   fit.py         multi-start best fit, distinct optima
   sample.py      posterior sampling with diagnostics
   validate.py    leave-one-energy-out and synthetic coverage tests
-examples/        benzene benchmark
+  plot.py        report plots: spectra, misfit maps, held-out predictions, timescales
+examples/        benzene benchmark and the Gate 1 comparison
+docs/            user guide and API reference (Sphinx)
 tests/           fast and slow tests
 ```
 

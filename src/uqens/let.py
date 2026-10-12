@@ -1,6 +1,6 @@
-"""Reading LET (ISIS) .nxspe files that hold S(|Q|, ω).
+"""Reading LET (ISIS) .nxspe files that hold S(Q, ω) at constant Q.
 
-These reductions store 249 constant-|Q| rows but not the Q axis itself.  The grid,
+These reductions store 249 constant-Q rows but not the Q axis itself.  The grid,
 recovered from the kinematic coverage of the data, is
 
     Q_row(n) = k_i (EDGE0 + DQ (n + ½)),    k_i = sqrt(E_i / 2.0721)
@@ -77,7 +77,7 @@ class Dataset:
 def noise_ratio(ds, sigma_res, wing=6.0):
     """Do the error bars describe the scatter?
 
-    In the wings (|ω| > ``wing`` × resolution) the true spectrum is smooth, so the
+    In the wings (``abs(ω) > wing`` × resolution) the true spectrum is smooth, so the
     second difference of neighbouring points is noise.  Returns the mean of
     (second difference)² / predicted variance (1.0 = error bars are right) and the
     number of triples used.  Neighbouring Q rows share counts, so after rows are
@@ -97,7 +97,7 @@ def noise_ratio(ds, sigma_res, wing=6.0):
 def prepare(path, qmin=0.3, qmax=2.6, wmax=1.25, dq_target=0.10, min_row_frac=0.75, bragg_halfwidth=0.06):
     """Read one file and bin it for fitting.
 
-    Keeps |ω| ≤ ``wmax``, drops cells next to the kinematic edge and Q rows within
+    Keeps ``abs(ω) <= wmax``, drops cells next to the kinematic edge and Q rows within
     ``bragg_halfwidth`` of a sample-environment Bragg peak, then averages groups of
     consecutive rows into bins of about ``dq_target``.  A point is kept when at least
     ``min_row_frac`` of the rows in its bin are valid there.  Cells with zero counts

@@ -1,6 +1,6 @@
 """Rotational diffusion channels for a scatterer on a sphere of radius R.
 
-The rotational part of S(Q, ω) is a sum of Lorentzians, one per channel (l, |m|),
+The rotational part of S(Q, ω) is a sum of Lorentzians, one per channel ``(l, abs(m))``,
 with weight (2l+1) j_l²(QR) c_lm and HWHM ħ[l(l+1) D_t + m² (D_s − D_t)]
 (symmetric-top rotational diffusion; isotropic when D_t = D_s).  The sum rule
 Σ_l (2l+1) j_l²(QR) = 1 says how many l are needed: at Q = 2.5 Å⁻¹ and R = 2.48 Å,
@@ -16,8 +16,8 @@ from scipy.special import gammaln, lpmv, spherical_jn
 
 
 def clm_table(lmax, theta0=math.pi / 2):
-    """Weights of the (l, |m|) channels for an atom at polar angle ``theta0`` from the
-    symmetry axis: (4π/(2l+1)) Σ_{±m} |Y_lm|², which sums to 1 over m for each l."""
+    """Weights of the ``(l, abs(m))`` channels for an atom at polar angle ``theta0`` from the
+    symmetry axis: ``(4π/(2l+1)) Σ_{±m} |Y_lm|²``, which sums to 1 over m for each l."""
     ls, ms, cs = [], [], []
     x = math.cos(theta0)
     for l in range(lmax + 1):

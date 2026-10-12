@@ -1,22 +1,22 @@
-.. qens documentation master file
+.. uqens documentation master file
 
 .. raw:: html
 
    <div class="qens-hero">
 
      <img src="_static/qens_logo_light.png" class="qens-logo qens-logo-light"
-          alt="qens — Quasi-Elastic Neutron Scattering Analysis" />
+          alt="uqens — Quasi-Elastic Neutron Scattering Analysis" />
      <img src="_static/qens_logo_dark.png"  class="qens-logo qens-logo-dark"
-          alt="qens — Quasi-Elastic Neutron Scattering Analysis" />
+          alt="uqens — Quasi-Elastic Neutron Scattering Analysis" />
 
      <div class="qens-badges">
        <a href="https://www.python.org/">
          <img src="https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square"
               alt="Python 3.10+">
        </a>
-       <a href="https://github.com/ShubhamX57/QENS/releases">
-         <img src="https://img.shields.io/badge/version-0.1.0-38bdf8?style=flat-square"
-              alt="v0.1.0">
+       <a href="https://github.com/ShubhamX57/QENS/tree/v2">
+         <img src="https://img.shields.io/badge/version-0.2.0.dev0-38bdf8?style=flat-square"
+              alt="v0.2.0.dev0">
        </a>
        <a href="https://github.com/ShubhamX57/QENS/blob/main/LICENSE">
          <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square"
@@ -26,14 +26,13 @@
      </div>
 
      <p class="qens-tagline">
-       End-to-end Bayesian analysis of quasi-elastic neutron scattering data
-       from ISIS Mantid <code>.nxspe</code> files : translational and rotational
-       diffusion models, ensemble MCMC, full posterior inference.
+       One physical model, fitted to every incident energy and every Q at once,
+       with uncertainties that are tested before they are reported.
      </p>
 
      <div class="qens-install">
        <span class="qens-prompt">$</span>
-       <span class="qens-cmd">pip install "qens[mcmc]"</span>
+       <span class="qens-cmd">pip install "uqens[plot] @ git+https://github.com/ShubhamX57/QENS.git@v2"</span>
      </div>
 
      <p class="qens-eco-label">Built with</p>
@@ -55,7 +54,16 @@
          </div>
          <span class="qens-eco-name">SciPy</span>
          <span class="qens-eco-ver">≥&nbsp;1.10</span>
-         <span class="qens-eco-desc">FFT · NNLS · fitting</span>
+         <span class="qens-eco-desc">Optimisation · special functions</span>
+       </a>
+
+       <a href="https://numba.pydata.org" class="qens-eco-card" title="numba">
+         <div class="qens-eco-logo">
+           <img src="https://numba.pydata.org/_static/numba-blue-icon-rgb.svg" alt="numba logo" />
+         </div>
+         <span class="qens-eco-name">numba</span>
+         <span class="qens-eco-ver">≥&nbsp;0.58</span>
+         <span class="qens-eco-desc">Compiled forward model</span>
        </a>
 
        <a href="https://matplotlib.org" class="qens-eco-card" title="Matplotlib">
@@ -65,7 +73,7 @@
          </div>
          <span class="qens-eco-name">Matplotlib</span>
          <span class="qens-eco-ver">≥&nbsp;3.7</span>
-         <span class="qens-eco-desc">All plots</span>
+         <span class="qens-eco-desc">Report plots (optional)</span>
        </a>
 
        <a href="https://www.h5py.org" class="qens-eco-card" title="h5py">
@@ -79,7 +87,7 @@
            </svg>
          </div>
          <span class="qens-eco-name">h5py</span>
-         <span class="qens-eco-ver">≥&nbsp;3.7</span>
+         <span class="qens-eco-ver">≥&nbsp;3.8</span>
          <span class="qens-eco-desc">NeXus file I/O</span>
        </a>
 
@@ -100,7 +108,7 @@
          </div>
          <span class="qens-eco-name">emcee</span>
          <span class="qens-eco-ver">≥&nbsp;3.1</span>
-         <span class="qens-eco-desc">Ensemble MCMC</span>
+         <span class="qens-eco-desc">Posterior sampling</span>
        </a>
 
        <a href="https://www.python.org" class="qens-eco-card" title="Python">
@@ -271,36 +279,35 @@
 .. grid:: 2
    :gutter: 2
 
-   .. grid-item-card::  Getting Started
+   .. grid-item-card::  Installation
       :link: installation
       :link-type: doc
 
-      Install the library and run the 60-second example.
+      Install from GitHub and run the tests.
 
-   .. grid-item-card::  Quick Start
+   .. grid-item-card::  Quick start
       :link: quickstart
       :link-type: doc
 
-      Full workflow: load >> pre-process >> fit >> MCMC >> plot.
+      Fit the benzene benchmark, sample the posterior, test it, plot it.
 
-   .. grid-item-card::  Physical Models
-      :link: models
+   .. grid-item-card::  The model
+      :link: model
       :link-type: doc
 
-      Fickian, Chudley-Elliott, Singwi-Sjölander, isotropic rotor,
-      anisotropic rotor, and the custom model registry.
+      Translation, rotation to the sum rule, resolution, amplitudes and priors.
 
-   .. grid-item-card::  API Reference
-      :link: api/index
+   .. grid-item-card::  Earning the result
+      :link: validation
       :link-type: doc
 
-      Auto-generated reference for every public function and class.
+      Every optimum, sampled uncertainties, held-out prediction and coverage.
 
 ----
 
 .. toctree::
    :maxdepth: 1
-   :caption: Getting Started
+   :caption: Getting started
    :hidden:
 
    installation
@@ -308,34 +315,17 @@
 
 .. toctree::
    :maxdepth: 1
-   :caption: User Guide
+   :caption: User guide
    :hidden:
 
-   pipeline
-   models
-   custom_models
-   config
-   usage_classical
-   usage_joint
+   model
+   validation
+   gate1
 
 .. toctree::
    :maxdepth: 1
-   :caption: API Reference
+   :caption: Reference
    :hidden:
 
-   api/index
-   api/io
-   api/config
-   api/preprocessing
-   api/models
-   api/fitting
-   api/sampling
-   api/plotting
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Project
-   :hidden:
-
+   api
    changelog
-   contributing

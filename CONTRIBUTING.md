@@ -1,5 +1,4 @@
-```markdown
-# Contributing to QENS
+# Contributing
 
 Thanks for contributing! Here's how to get started.
 
@@ -8,30 +7,31 @@ Thanks for contributing! Here's how to get started.
 ```bash
 git clone https://github.com/ShubhamX57/QENS.git
 cd QENS
-pip install -e .
-pip install flake8 pytest black isort
+git switch v2
+pip install -e ".[dev]"
 ```
 
 ## Workflow
 
-1. Create a branch: `git checkout -b feature/your-feature`
-2. Make changes and test: `pytest`
-3. Format code: `black qens/ && isort qens/`
-4. Commit and push
-5. Open a Pull Request
+1. Create a branch from `v2`: `git switch -c feature/your-feature`
+2. Make changes, then run `ruff check .`, `ruff format .` and `pytest`
+3. If you touched the reader, the forward model or the fitting, also run `pytest -m slow`
+4. Commit, push and open a pull request against `v2`
 
-## Guidelines
+## Rules that keep results trustworthy
 
-- Follow PEP 8 (max line length: 127)
-- Add docstrings to public functions
-- One feature/fix per PR
-- Link related issues (e.g., "Fixes #12")
+- Every change to the physics or the data handling comes with a test that would have
+  failed before it (a known value, a sum rule, a synthetic recovery).
+- `tests/test_model.py::test_benchmark_likelihood_is_unchanged` guards the benzene
+  benchmark. If a change is meant to move it, say why in the pull request and update
+  the stored value in the same commit.
+- Uncertainties come from samples, not from the curvature at the best fit.
 
-## Reporting Bugs
+## Reporting bugs
 
-Include: Python version, QENS version, error traceback, and minimal code to reproduce.
+Include: Python version, uqens version (`uqens.__version__`), the traceback, and the
+smallest code and data that reproduce it.
 
 ## Questions?
 
 Open an [issue](https://github.com/ShubhamX57/QENS/issues).
-```

@@ -3,131 +3,101 @@
   <img src="logo/qens_logo_light.png#gh-light-mode-only" width="1000"/>
 </p>
 
+# uqens: Quasi-Elastic Neutron Scattering analysis
 
-# qens - Quasi-Elastic Neutron Scattering analysis
-[![Documentation Status](https://readthedocs.org/projects/qens/badge/?version=latest)](https://qens.readthedocs.io/en/latest/)
+[![tests](https://github.com/ShubhamX57/QENS/actions/workflows/ci.yml/badge.svg?branch=v2)](https://github.com/ShubhamX57/QENS/actions/workflows/ci.yml)
 [![Python: 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-End to end Python toolbox for analysing **Quasi-Elastic Neutron Scattering**
-data from ISIS Mantid `.nxspe` files (IRIS, OSIRIS, LET, MARI, MAPS, …) and
-any other Mantid-produced inelastic-spectrometer output.
+One physical model, fitted to every incident energy and every Q at once, with
+uncertainties that are tested before they are reported.
 
-The library is built around a clean separation between **physics models**
-and **inference machinery**:
+> **Status: version 2, in development.** This branch replaces the v0.1 library
+> (tag `v0.1.0-legacy`). v0.1 reads the Q axis of LET `.nxspe` files wrongly
+> (median error 42%), so results produced with it should not be used.
 
-* The model catalogue includes Lorentzian and Gaussian primitives, three
-  translational-diffusion HWHM models (Fickian, Chudley-Elliott,
-  Singwi-Sjölander), and rotational structure factors (isotropic and
-  anisotropic axial rotor, expanded to *l* = 2).
-* These are combined into a full forward model
-  S(Q, ω) = e<sup>−Q²⟨u²⟩/3</sup> · [translation x rotation] x resolution
-  with a measured-kernel resolution path (use the frozen-sample
-  S(Q, ω) directly : Lorentzian wings of real instruments don't fit a
-  Gaussian).
-* Inference is a joint-Q likelihood across **all** Q-bins simultaneously,
-  with NNLS amplitude fitting per bin. MAP search is multi-start
-  Nelder-Mead; MCMC is `emcee` (with a pure-NumPy Metropolis-Hastings
-  fallback). Convergence diagnostics (autocorrelation time, Gelman-Rubin
-  R̂) are reported automatically.
-* Custom forward models can be registered without modifying core code.
+## What it does
 
----
-> **Note on documentation**
->
-> Inline documentation lives in the code itself: every public function, class,
-> and module has a docstring, and additional comments are added wherever the
-> logic isn't self-explanatory.
->
-> For full reference material — API docs, the user guide, model descriptions,
-> and worked examples — see the Read the Docs site:
-> **[qens.readthedocs.io/en/latest/index.html](https://qens.readthedocs.io/en/latest/index.html)**
+- **Reads LET S(Q, ω) files correctly.** The constant-Q axis these reductions do
+  not store is recovered and checked against the aluminium Bragg peak of the can;
+  error bars are audited against the scatter of the data and rescaled.
+- **Fits physics, not line shapes.** Translation (Fickian or jump diffusion) times
+  rotation (isotropic or symmetric top, expanded until the sum rule is met),
+  convolved analytically with a fitted, asymmetric resolution, with detailed
+  balance. Per-Q amplitudes, can scattering and background are solved exactly.
+- **Uses every incident energy together.** LET records several energies in one
+  run; each sees a different time window, so one joint fit pins down what no
+  single energy can.
+- **Reports every optimum and sampled uncertainties.** Several starts, every
+  distinct mode kept; error bars from posterior samples, with convergence
+  diagnostics returned in the result.
+- **Tests models before trusting them.** Leave-one-energy-out prediction and
+  synthetic coverage tests are part of the library.
 
----
-###  Package Installation
-
-The `qens` package is not yet published on PyPI. Install directly from this repository:
+## Install
 
 ```bash
-# Clone and install locally
 git clone https://github.com/ShubhamX57/QENS.git
 cd QENS
-pip install -e .
-
-# Or install directly from GitHub
-pip install git+https://github.com/ShubhamX57/QENS.git
+git switch v2
+pip install -e ".[dev]"
 ```
 
-Then use normally:
+The name `qens` on PyPI belongs to an unrelated project; this package will be
+published as `uqens`.
+
+## Quick start
+
 ```python
-import qens
+import uqens
+
+files = [f"data/benzene_290_{e}_inc.nxspe" for e in ("124", "197", "360", "861")]
+data = uqens.let.load(files, verbose=True)          # Q axis, masks, error audit
+
+problem = uqens.Problem(uqens.LADDER["jump+iso"], data)
+best = uqens.fit(problem)                           # several starts, all optima kept
+print(best.summary())
+
+post = uqens.sample(problem, best.x, n_steps=3000)  # posterior samples
+print(post.summary())                               # medians, 95% intervals, tau, R-hat
 ```
 
-> **Note**: The name `qens` was already taken on PyPI. We are working on publishing as **`uqens`** (Unified Quasi-Elastic Neutron Scattering analysis) soon.
+Or run the benchmark: `python examples/benzene_let.py --sample 3000 --holdout`.
 
+## Benchmark: liquid benzene at 290 K (LET)
 
----
+| Quantity | uqens (jump diffusion + isotropic rotation, 4 energies) | Reference |
+|---|---|---|
+| D (Å²/ps) | 0.172, 95% interval 0.162–0.182 | PFG-NMR ≈ 0.18 |
+| τ₀ (ps) | 0.95 (0.71–1.20) | |
+| D_r (ps⁻¹) | 0.166 (0.163–0.169) | |
 
+The published LET analysis of the same data gives D = 0.182 with a different model
+and data selection; reproducing that number is the first open task.
 
-## Library layout
+## Tests
+
+```bash
+pytest            # fast: Q axis, line shapes, rotation sum rule, solver, benchmark likelihood
+pytest -m slow    # minutes: full benchmark fit and synthetic recovery
+```
+
+## Layout
 
 ```
-qens/
-├── __init__.py             public API surface
-├── config.py               Config dataclass
-├── constants.py            physical constants
-├── io.py                   .nxspe reader + Q-from-2θ
-├── preprocessing.py        elastic-peak alignment, resolution assignment
-├── models/
-│   ├── __init__.py
-│   ├── lineshapes.py       Lorentzian, Gaussian, lorentz_sum
-│   ├── translation.py      Fickian, CE, SS HWHM
-│   ├── rotation.py         isotropic + anisotropic rotor widths,
-│   │                       spherical-Bessel weights
-│   ├── forward.py          predict_sqw, ForwardModel dataclass
-│   └── registry.py         register_model / get_model / available_models
-├── fitting.py              binning, joint likelihood, MAP, classical HWHM
-├── sampling.py             emcee + MH fallback, summary, R̂
-└── plotting.py             publication figures
+src/uqens/
+  let.py         LET reader: Q axis, binning, Bragg masks, error audit, resolution prior
+  lineshapes.py  analytic Voigt convolution, asymmetric resolution
+  rotation.py    rotational channels and the sum rule
+  forward.py     forward model and exact per-bin nuisance solver (numba)
+  model.py       ModelSpec, model ladder, parameters, priors, likelihood
+  fit.py         multi-start best fit, distinct optima
+  sample.py      posterior sampling with diagnostics
+  validate.py    leave-one-energy-out and synthetic coverage tests
+examples/        benzene benchmark
+tests/           fast and slow tests
 ```
----
-## Notebook
 
-If looking for a simple method of analysis of qens data, the [notebook_app](https://github.com/ShubhamX57/QENS/blob/main/Notebook_app.ipynb) is a highly versatile quick method of performing model pre-processing, fitting and analysis. 
+## Licence
 
-Simply:
-- select the correct data folder and pick the correct dataset(s) to analyse
-- choose appropriate physical model(built in or self written)
-- Select least squares or Bayesian fitting method
-- investigate parameter values and plots
-
-
-
-
-
-
-
-
----
-
-## Citing
-
-If `qens` is useful in published work please cite the repository and (if
-the anisotropic-rotor model is used) the underlying paper:
-
-> Richardson H., McColl K., Nilsen G. J., Armstrong J., McCluskey A. R.,
-> *Lost in Translation: Simulation-Informed Bayesian Inference Improves
-> Understanding of Molecular Motion From Neutron Scattering*,
-> arXiv:2603.06080 (2026). https://arxiv.org/abs/2603.06080
-
----
-
-## Contributing
-
-Pull requests welcome. See `tests/` for the existing unit tests
-(`pytest -v` to run). Style: `ruff check qens`. New physical models
-should land in `qens/models/` and be registered in
-`qens/models/registry.py`.
-
----
-
+MIT, see [LICENSE](LICENSE).

@@ -59,3 +59,43 @@ def test_nnls_matches_scipy():
         ref += res**2
         assert np.allclose(amps[b], sol, atol=1e-8)
     assert abs(total - ref) < 1e-8 * ref
+
+
+def test_measured_kernel_reproduces_the_analytic_convolution():
+    """A Gaussian 'measured' kernel must give the same line as the analytic Voigt."""
+    from uqens.forward import spectrum_kernel
+
+    step, sigma, D, q0 = 0.002, 0.03, 0.17, 1.2
+    grid = np.arange(-1.5, 1.5 + step / 2, step)
+    k_val = np.exp(-0.5 * (grid / sigma) ** 2)
+    k_val /= k_val.sum()
+    k_off = np.array([0, len(grid)], np.int64)
+    k_dw = np.full(len(grid), step)
+    omega = grid[np.abs(grid) <= 1.0]
+    q = np.full(len(omega), q0)
+    W, lch, mch = channel_weights(q, "none")
+    shape, el = np.empty(len(omega)), np.empty(len(omega))
+    spectrum_kernel(
+        omega,
+        q,
+        np.zeros(len(omega), np.int64),
+        W,
+        lch,
+        mch,
+        D,
+        0.0,
+        FICKIAN,
+        0.0,
+        0.0,
+        np.inf,
+        k_off,
+        grid,
+        k_val,
+        k_dw,
+        shape,
+        el,
+    )
+    gamma = HBAR * D * q0**2
+    expected = np.array([voigt(w, sigma, gamma) for w in omega])
+    assert np.max(np.abs(shape - expected)) < 1e-3 * expected.max()
+    assert np.allclose(el, np.interp(omega, grid, k_val / step))

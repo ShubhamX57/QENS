@@ -48,3 +48,39 @@ def test_resolution_prior_scales_with_energy():
     widths = [let.resolution_sigma(e) for e in (1.24, 1.97, 3.60, 8.61)]
     assert widths == sorted(widths)
     assert abs(let.resolution_sigma(3.60) - let.SIGMA_360) < 1e-12
+
+
+def test_measured_resolution_kernel(data_dir):
+    ds = let.load([data_dir / "benzene_290_360_inc.nxspe"], qmin=0.67, qmax=1.72, dq_target=0.096)[0]
+    let.attach_resolution(ds, data_dir / "benzene_260_360_inc.nxspe")
+    kern = ds.meta["kernel"]
+    assert len(kern["offsets"]) == ds.n_bins + 1
+    for b in range(ds.n_bins):
+        assert abs(kern["weights"][kern["offsets"][b] : kern["offsets"][b + 1]].sum() - 1.0) < 1e-12
+
+
+def test_resolution_must_match_the_energy(data_dir):
+    import pytest
+
+    ds = let.load([data_dir / "benzene_290_197_inc.nxspe"])[0]
+    with pytest.raises(ValueError):
+        let.attach_resolution(ds, data_dir / "benzene_260_360_inc.nxspe")
+
+
+def test_empty_can_subtraction_keeps_every_point(data_dir):
+    """Zero-count cells of the weak can run are measured zeros, not missing data."""
+    kw = {"qmin": 0.67, "qmax": 1.72, "dq_target": 0.096}
+    raw = let.load([data_dir / "benzene_290_360_inc.nxspe"], **kw)[0]
+    sub = let.load([data_dir / "benzene_290_360_inc.nxspe"], background={3.60: data_dir / "empty_360_inc.nxspe"}, **kw)[
+        0
+    ]
+    assert len(sub.y) == len(raw.y) and sub.meta["dropped_in_subtraction"] == 0
+    centre = np.abs(raw.omega) < 0.05
+    assert np.sum(sub.y[centre]) < np.sum(raw.y[centre])
+
+
+def test_background_only_where_given(data_dir):
+    from .conftest import benzene_files
+
+    data = let.load(benzene_files(), background={3.60: data_dir / "empty_360_inc.nxspe"})
+    assert ["subtracted" in d.meta for d in data] == [False, False, True, False]

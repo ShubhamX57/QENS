@@ -39,7 +39,8 @@ def starts(problem: Problem, n_random=6, seed=0, seeds=DEFAULT_SEEDS):
         if "lnDr" in problem.idx:
             th[problem.idx["lnDr"]] = 0.5 * (s["lnDt"] + s["lnDs"])
         out.append(th)
-    return out + [problem.sample_prior(rng) for _ in range(n_random)]
+    out += [problem.sample_prior(rng) for _ in range(n_random)]
+    return [problem.scale_amplitudes(th) for th in out]
 
 
 def optimise(problem: Problem, x0):

@@ -52,6 +52,40 @@ def spectrum(omega, dw, q, W, lch, mch, D, tau0, transl, Dt, Ds, sigma, gR, e0, 
         el[i] = res_line(x, dw[i], sigma, gR, f2, d2, s2)
 
 
+@njit(cache=True, parallel=True)
+def spectrum_kernel(omega, q, bin_id, W, lch, mch, D, tau0, transl, Dt, Ds, kT, k_off, k_w, k_val, k_dw, shape, el):
+    """As ``spectrum``, but convolved with a measured resolution: in Q-bin b the
+    kernel is the points ``k_off[b]:k_off[b+1]`` at energies ``k_w`` with unit-sum
+    weights ``k_val`` (bin widths ``k_dw``).  The convolution is a direct sum at
+    the kernel's own energies, so nothing is shifted by grid centring.
+    """
+    n = omega.shape[0]
+    nch = lch.shape[0]
+    for i in prange(n):
+        b = bin_id[i]
+        q2 = q[i] * q[i]
+        if transl == 0:
+            gt = HBAR * D * q2
+        else:
+            gt = HBAR * D * q2 / (1.0 + D * q2 * tau0)
+        s = 0.0
+        e = 0.0
+        for k in range(k_off[b], k_off[b + 1]):
+            x = omega[i] - k_w[k]
+            if abs(x) < 0.5 * k_dw[k]:
+                e = k_val[k] / k_dw[k]  # the kernel itself, for the elastic (can) term
+            for c in range(nch):
+                wg = W[i, c]
+                if wg < 1e-9:
+                    continue
+                l = lch[c]
+                m = mch[c]
+                g = gt + HBAR * (l * (l + 1) * Dt + m * m * (Ds - Dt))
+                s += k_val[k] * wg * g / (math.pi * (x * x + g * g))
+        shape[i] = s * math.exp(0.5 * omega[i] / kT)
+        el[i] = e
+
+
 @njit(cache=True)
 def _solve_subset(G, r, mask):
     """Least squares on the columns selected by ``mask``; (ok, amplitudes, χ² reduction)."""

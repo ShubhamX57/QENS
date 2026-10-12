@@ -64,3 +64,31 @@ def test_model_curve_follows_the_data(benzene):
     for k, d in enumerate(benzene):
         resid = (d.y - p.model_curve(x, k)) / d.err
         assert abs(resid.mean()) < 0.2 and resid.std() < 1.5
+
+
+def test_published_style_options(data_dir):
+    """Global amplitudes with ⟨u²⟩, no can term, no detailed balance, measured resolution."""
+    from uqens import ModelSpec, let
+    from uqens.fit import starts
+
+    ds = let.load([data_dir / "benzene_290_360_inc.nxspe"], qmin=0.67, qmax=1.72, dq_target=0.096)
+    let.attach_resolution(ds[0], data_dir / "benzene_260_360_inc.nxspe")
+    spec = ModelSpec(
+        "paper-like",
+        "fickian",
+        "aniso",
+        lmax=2,
+        use_el=False,
+        amplitudes="global",
+        resolution="measured",
+        detailed_balance=False,
+    )
+    p = Problem(spec, ds)
+    assert "lnsig_3.60" not in p.idx and "kappa" not in p.idx
+    assert "lnC_3.60" in p.idx and "u2" in p.idx
+    x = starts(p, n_random=0)[0]
+    assert np.isfinite(p.logpost(x))
+    curve = p.model_curve(x, 0)
+    assert np.all(np.isfinite(curve))
+    # the least-squares scale puts the model at the level of the data
+    assert 0.5 < np.sum(curve) / np.sum(ds[0].y) < 2.0

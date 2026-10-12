@@ -64,6 +64,14 @@ print(post.summary())                               # medians, 95% intervals, ta
 
 Or run the benchmark: `python examples/benzene_let.py --sample 3000 --holdout`.
 
+With a measured resolution and an empty can (both must be at the same incident energy):
+
+```python
+data = uqens.let.load(files, background={3.60: "data/empty_360_inc.nxspe"})
+uqens.let.attach_resolution(data[2], "data/benzene_260_360_inc.nxspe")
+spec = uqens.ModelSpec("measured-res", resolution="measured")  # energies without a kernel stay analytic
+```
+
 ## Benchmark: liquid benzene at 290 K (LET)
 
 | Quantity | uqens (jump diffusion + isotropic rotation, 4 energies) | Reference |
@@ -72,8 +80,10 @@ Or run the benchmark: `python examples/benzene_let.py --sample 3000 --holdout`.
 | τ₀ (ps) | 0.95 (0.71–1.20) | |
 | D_r (ps⁻¹) | 0.166 (0.163–0.169) | |
 
-The published LET analysis of the same data gives D = 0.182 with a different model
-and data selection; reproducing that number is the first open task.
+The published LET analysis of the same data (Richardson et al. 2026) gives D = 0.182
+with a different model and data selection. With the choices that paper describes,
+these files give D ≈ 0.13 instead; see [docs/gate1.md](docs/gate1.md) and
+`examples/gate1_published_setup.py`.
 
 ## Tests
 

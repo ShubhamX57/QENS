@@ -58,7 +58,9 @@ def holdout(spec: ModelSpec, datasets, best: Problem, x_best, verbose=False):
 
     For each energy: the physics is fitted on the others; on the held-out energy only
     the instrument parameters and the per-bin amplitudes are refitted.  ``penalty``
-    is that χ² minus the χ² with everything refitted (0 = perfect transfer).
+    is that χ² minus the χ² with everything refitted (0 = perfect transfer).  Each
+    row also carries the held-out ``problem`` and the transferred parameters ``x``,
+    which ``plot.holdout`` draws.
     """
     out = []
     for h, held in enumerate(datasets):
@@ -71,7 +73,7 @@ def holdout(spec: ModelSpec, datasets, best: Problem, x_best, verbose=False):
         x0 = xo.copy()
         for n, v in phys.items():
             x0[one.idx[n]] = v
-        _, chi_transfer = fit_with_fixed(one, x0, phys)
+        x_transfer, chi_transfer = fit_with_fixed(one, x0, phys)
         row = {
             "ei": held.ei,
             "n": len(held.y),
@@ -79,6 +81,8 @@ def holdout(spec: ModelSpec, datasets, best: Problem, x_best, verbose=False):
             "chi2_free": chi_free,
             "penalty": chi_transfer - chi_free,
             "train_physics": train.physics(xt),
+            "problem": one,
+            "x": x_transfer,
         }
         out.append(row)
         if verbose:
